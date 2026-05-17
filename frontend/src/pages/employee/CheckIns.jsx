@@ -15,6 +15,7 @@ export default function EmployeeCheckIns() {
   const fetchData = async () => {
     try {
       const res = await getMyCheckIns();
+      console.log('Employee check-ins loaded:', res.data);
       setGoals(res.data.goals);
       setCurrentQuarter(res.data.currentQuarter);
       setCycle(res.data.cycle);

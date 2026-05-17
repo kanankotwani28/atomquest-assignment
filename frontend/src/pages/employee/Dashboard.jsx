@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   getMyGoals,
@@ -135,6 +136,12 @@ export default function EmployeeDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-600">{user.name}</span>
+            <Link
+              to="/employee/checkins"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+            >
+              Check-ins →
+            </Link>
             <button
               onClick={logout}
               className="text-xs text-gray-400 hover:text-gray-600 transition-colors"

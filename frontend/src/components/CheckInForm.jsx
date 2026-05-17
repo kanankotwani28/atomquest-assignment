@@ -54,15 +54,20 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
   };
 
   const handleSave = async () => {
+    const payload = {
+      goalId: goal.id,
+      quarter,
+      actual:         goal.uomType !== 'TIMELINE' ? parseFloat(actual) : undefined,
+      completionDate: goal.uomType === 'TIMELINE' ? completionDate    : undefined,
+      progressStatus
+    };
+
+    console.log('Employee check-in save payload:', payload);
+
     setSaving(true);
     try {
-      await upsertCheckIn({
-        goalId: goal.id,
-        quarter,
-        actual:         goal.uomType !== 'TIMELINE' ? parseFloat(actual) : undefined,
-        completionDate: goal.uomType === 'TIMELINE' ? completionDate    : undefined,
-        progressStatus
-      });
+      const res = await upsertCheckIn(payload);
+      console.log('Employee check-in save response:', res.data);
       toast.success(`${quarter} check-in saved`);
       onSaved();
     } catch (err) {

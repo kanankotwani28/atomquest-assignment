@@ -39,12 +39,20 @@ const toCheckInPayload = (data) => ({
   progress_status: data.progressStatus ?? data.progress_status,
 });
 
+const withoutUndefined = (data) => Object.fromEntries(
+  Object.entries(data).filter(([, value]) => value !== undefined),
+);
+
 export const getMyCheckIns = async () => {
   const res = await api.get('/checkins/my');
   return { ...res, data: normalizeMyCheckIns(res.data) };
 };
 
-export const upsertCheckIn = (data) => api.post('/checkins', toCheckInPayload(data));
+export const upsertCheckIn = (data) => {
+  const payload = withoutUndefined(toCheckInPayload(data));
+  console.log('POST /api/checkins payload:', payload);
+  return api.post('/checkins', payload);
+};
 
 export const getTeamCheckIns = async () => {
   const res = await api.get('/checkins/team');
