@@ -155,3 +155,90 @@ def activate_cycle(cycle_id: str, db: Session = Depends(get_db),
     cycle.is_active = True
     db.commit()
     return {"message": f"Cycle {cycle.year} activated"}
+
+@router.post("/cycles")
+def create_cycle(payload: dict, db: Session = Depends(get_db),
+                 _=Depends(require_role(RoleEnum.ADMIN))):
+    year = payload.get("year")
+    phase = payload.get("phase")
+    start_date = payload.get("start_date")
+    end_date = payload.get("end_date")
+    is_active = bool(payload.get("is_active", False))
+
+    if not all([year, phase, start_date, end_date]):
+        raise HTTPException(400, "year, phase, start_date and end_date are required")
+
+    if is_active:
+        db.query(Cycle).update({"is_active": False})
+
+    cycle = Cycle(
+        year=int(year),
+        phase=phase,
+        start_date=datetime.fromisoformat(start_date),
+        end_date=datetime.fromisoformat(end_date),
+        is_active=is_active
+    )
+    db.add(cycle)
+    db.commit()
+    db.refresh(cycle)
+    return cycle
+
+# ── Org hierarchy ─────────────────────────────────────────────────
+@router.get("/users")
+def list_users(db: Session = Depends(get_db),
+               _=Depends(require_role(RoleEnum.ADMIN))):
+    users = db.query(User).order_by(User.role, User.name).all()
+    return [{
+        "id": str(u.id),
+        "name": u.name,
+        "email": u.email,
+        "role": u.role.value,
+        "department": u.department,
+        "manager_id": str(u.manager_id) if u.manager_id else None,
+    } for u in users]
+
+@router.put("/users/{user_id}/manager")
+def update_manager(user_id: str, payload: dict, db: Session = Depends(get_db),
+                   _=Depends(require_role(RoleEnum.ADMIN))):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    manager_id = payload.get("manager_id")
+    if manager_id:
+        manager = db.query(User).filter(
+            User.id == manager_id,
+            User.role == RoleEnum.MANAGER
+        ).first()
+        if not manager:
+            raise HTTPException(404, "Manager not found")
+        if str(manager.id) == str(user.id):
+            raise HTTPException(400, "User cannot report to themselves")
+
+    user.manager_id = manager_id or None
+    db.commit()
+    db.refresh(user)
+    return {"message": "Reporting manager updated"}
+
+# ── Goal oversight ────────────────────────────────────────────────
+@router.get("/goals")
+def list_goals(db: Session = Depends(get_db),
+               _=Depends(require_role(RoleEnum.ADMIN))):
+    cycle = db.query(Cycle).filter(Cycle.is_active == True).first()
+    if not cycle:
+        raise HTTPException(404, "No active cycle")
+
+    goals = db.query(Goal).filter(Goal.cycle_id == cycle.id).order_by(Goal.created_at.desc()).all()
+    return [{
+        "id": str(g.id),
+        "title": g.title,
+        "owner": g.owner.name if g.owner else "",
+        "department": g.owner.department if g.owner else "",
+        "thrustArea": g.thrust_area.name if g.thrust_area else "",
+        "status": g.status.value,
+        "weightage": g.weightage,
+        "target": g.target,
+        "uomType": g.uom_type.value,
+        "isShared": g.is_shared,
+        "lockedAt": g.locked_at,
+    } for g in goals]

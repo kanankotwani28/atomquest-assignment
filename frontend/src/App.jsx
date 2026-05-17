@@ -5,8 +5,8 @@ import EmployeeDashboard  from './pages/employee/Dashboard';
 import EmployeeCheckIns   from './pages/employee/CheckIns';
 import ManagerDashboard   from './pages/manager/Dashboard';
 import ManagerCheckIns    from './pages/manager/CheckIns';
+import AdminDashboard     from './pages/admin/Dashboard';
 
-const AdminDashboard = () => <div className="p-8 text-xl">Admin — Phase 5</div>;
 const Unauthorized   = () => <div className="p-8 text-red-500">403 — Access denied.</div>;
 
 export default function App() {
