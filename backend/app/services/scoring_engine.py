@@ -13,7 +13,7 @@ def calculate_score(uom_type: UoMTypeEnum, target: float,
 
     if uom_type == UoMTypeEnum.TIMELINE:
         if not completion_date: return None
-        deadline = datetime.fromtimestamp(target / 1000) if target > 1e9 else datetime.fromtimestamp(target)
+        deadline = (datetime.fromtimestamp(target / 1000) if target > 1e9 else datetime.fromtimestamp(target))
         if completion_date <= deadline: return 100.0
         days_late = (completion_date - deadline).days
         return max(0.0, round(100 - days_late * 5, 2))
@@ -23,3 +23,4 @@ def calculate_score(uom_type: UoMTypeEnum, target: float,
         return 100.0 if actual == 0 else 0.0
 
     return None
+            
