@@ -4,7 +4,7 @@ from sqlalchemy import func
 from typing import List
 from app.database import get_db
 from app.models.models import Goal, GoalStatusEnum, Cycle, User, RoleEnum, ThrustArea
-from app.schemas.schemas import GoalCreate, GoalUpdate, GoalOut, ManagerGoalEdit, ThrustAreaOut, CycleOut
+from app.schemas.schemas import GoalCreate, GoalUpdate, GoalOut, ManagerGoalEdit, ThrustAreaOut, CycleOut, SharedGoalPush
 from app.dependencies import get_current_user, require_role
 from app.services.audit_logger import log_change
 from datetime import datetime
@@ -201,6 +201,47 @@ def get_team_goals(db: Session = Depends(get_db),
         })
 
     return {"team": team, "cycle": cycle}
+
+@router.post("/team/shared-goals")
+def push_team_shared_goal(body: SharedGoalPush,
+                          db: Session = Depends(get_db),
+                          current_user: User = Depends(require_role(RoleEnum.MANAGER))):
+    cycle = get_active_cycle(db)
+    requested_ids = {str(emp_id) for emp_id in body.employee_ids}
+    employees = db.query(User).filter(
+        User.id.in_(requested_ids),
+        User.role == RoleEnum.EMPLOYEE
+    ).all()
+
+    found_ids = {str(emp.id) for emp in employees}
+    if found_ids != requested_ids:
+        raise HTTPException(status_code=404, detail="One or more employees were not found")
+
+    unauthorized = [emp.name for emp in employees if str(emp.manager_id) != str(current_user.id)]
+    if unauthorized:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Can only push goals to your direct reports: {', '.join(unauthorized)}"
+        )
+
+    now = datetime.utcnow()
+    for emp in employees:
+        goal = Goal(
+            title=body.title,
+            thrust_area_id=str(body.thrust_area_id),
+            uom_type=body.uom_type,
+            target=body.target,
+            weightage=body.weightage,
+            owner_id=emp.id,
+            cycle_id=cycle.id,
+            is_shared=True,
+            status=GoalStatusEnum.APPROVED,
+            locked_at=now
+        )
+        db.add(goal)
+
+    db.commit()
+    return {"message": f"Departmental KPI pushed to {len(employees)} employee(s)"}
 
 # ── Manager: approve all goals for an employee ────────────────────
 @router.post("/approve")

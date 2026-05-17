@@ -1,15 +1,34 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getTeamGoals, approveGoals, returnGoal } from "../../api/manager";
+import { getThrustAreas } from "../../api/goals";
+import { getTeamGoals, approveGoals, returnGoal, pushTeamSharedGoal } from "../../api/manager";
 import EmployeeGoalCard from "../../components/EmployeeGoalCard";
 import ReturnReasonModal from "../../components/ReturnReasonModal";
 import toast, { Toaster } from "react-hot-toast";
+
+const initialSharedGoal = {
+  title: "",
+  thrust_area_id: "",
+  uom_type: "NUMERIC_MIN",
+  target: "",
+  weightage: "",
+  employee_ids: [],
+};
+
+const UOM_OPTIONS = [
+  { value: "NUMERIC_MIN", label: "Higher is better" },
+  { value: "NUMERIC_MAX", label: "Lower is better" },
+  { value: "TIMELINE", label: "Timeline" },
+  { value: "ZERO", label: "Zero = Success" },
+];
 
 export default function ManagerDashboard() {
   const { user, logout } = useAuth();
   const [team, setTeam] = useState([]);
   const [cycle, setCycle] = useState(null);
+  const [thrustAreas, setThrustAreas] = useState([]);
+  const [sharedGoal, setSharedGoal] = useState(initialSharedGoal);
   const [loading, setLoading] = useState(true);
   const [returningGoal, setReturningGoal] = useState(null); // goal being returned
 
@@ -27,6 +46,9 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     fetchTeam();
+    getThrustAreas()
+      .then((res) => setThrustAreas(res.data))
+      .catch(() => {});
   }, []);
 
   const handleApprove = async (employeeId) => {
@@ -53,6 +75,31 @@ export default function ManagerDashboard() {
       fetchTeam();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to return goal");
+    }
+  };
+
+  const toggleSharedGoalRecipient = (employeeId) => {
+    setSharedGoal((prev) => ({
+      ...prev,
+      employee_ids: prev.employee_ids.includes(employeeId)
+        ? prev.employee_ids.filter((id) => id !== employeeId)
+        : [...prev.employee_ids, employeeId],
+    }));
+  };
+
+  const handlePushSharedGoal = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await pushTeamSharedGoal({
+        ...sharedGoal,
+        target: Number(sharedGoal.target),
+        weightage: Number(sharedGoal.weightage),
+      });
+      toast.success(res.data.message);
+      setSharedGoal(initialSharedGoal);
+      fetchTeam();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to push KPI");
     }
   };
 
@@ -130,6 +177,88 @@ export default function ManagerDashboard() {
             </p>
           </div>
         )}
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Departmental KPI Push</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Push an approved shared goal to selected direct reports.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handlePushSharedGoal} className="space-y-3">
+            <input
+              value={sharedGoal.title}
+              onChange={(e) => setSharedGoal({ ...sharedGoal, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              placeholder="KPI title"
+              required
+            />
+            <div className="grid grid-cols-4 gap-3">
+              <select
+                value={sharedGoal.thrust_area_id}
+                onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                required
+              >
+                <option value="">Thrust area</option>
+                {thrustAreas.map((area) => (
+                  <option key={area.id} value={area.id}>{area.name}</option>
+                ))}
+              </select>
+              <select
+                value={sharedGoal.uom_type}
+                onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+              >
+                {UOM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                step="any"
+                value={sharedGoal.target}
+                onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                placeholder="Target"
+                required
+              />
+              <input
+                type="number"
+                min="10"
+                max="100"
+                value={sharedGoal.weightage}
+                onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                placeholder="Weightage"
+                required
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {team.map(({ employee }) => (
+                <label key={employee.id} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-xs">
+                  <input
+                    type="checkbox"
+                    checked={sharedGoal.employee_ids.includes(employee.id)}
+                    onChange={() => toggleSharedGoalRecipient(employee.id)}
+                  />
+                  {employee.name}
+                </label>
+              ))}
+            </div>
+
+            <button
+              disabled={sharedGoal.employee_ids.length === 0}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
+            >
+              Push KPI to {sharedGoal.employee_ids.length} employee(s)
+            </button>
+          </form>
+        </div>
 
         {/* Team cards */}
         {team.length === 0 ? (

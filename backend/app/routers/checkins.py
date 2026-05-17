@@ -23,7 +23,7 @@ def get_current_quarter() -> str | None:
     if 3  <= m <= 4:  return "Q4"
     return None  # May/June is goal-setting phase; no check-in window.
 
-# ── Employee: upsert check-in ─────────────────────────────────────
+# ── Employee: upsert check-in 
 @router.post("/")
 def upsert_checkin(body: CheckInCreate,
                    db: Session = Depends(get_db),
