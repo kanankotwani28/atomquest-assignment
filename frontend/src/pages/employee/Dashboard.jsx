@@ -1,28 +1,34 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { getMyGoals, getThrustAreas, createGoal,
-         updateGoal, deleteGoal, submitAllGoals } from '../../api/goals';
-import GoalCard from '../../components/GoalCard';
-import GoalFormModal from '../../components/GoalFormModal';
-import WeightageBar from '../../components/WeightageBar';
-import toast, { Toaster } from 'react-hot-toast';
+import { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import {
+  getMyGoals,
+  getThrustAreas,
+  createGoal,
+  updateGoal,
+  deleteGoal,
+  submitAllGoals,
+} from "../../api/goals";
+import GoalCard from "../../components/GoalCard";
+import GoalFormModal from "../../components/GoalFormModal";
+import WeightageBar from "../../components/WeightageBar";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
-  const [goals, setGoals]             = useState([]);
+  const [goals, setGoals] = useState([]);
   const [thrustAreas, setThrustAreas] = useState([]);
-  const [cycle, setCycle]             = useState(null);
-  const [modalOpen, setModalOpen]     = useState(false);
+  const [cycle, setCycle] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const fetchGoals = async () => {
     try {
       const res = await getMyGoals();
-      setGoals(res.data.goals);
+      setGoals(res.data.goals || []);
       setCycle(res.data.cycle);
     } catch {
-      toast.error('Failed to load goals');
+      toast.error("Failed to load goals");
     } finally {
       setLoading(false);
     }
@@ -30,63 +36,73 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     fetchGoals();
-    getThrustAreas().then(r => setThrustAreas(r.data)).catch(() => {});
+    getThrustAreas()
+      .then((r) => setThrustAreas(r.data))
+      .catch(() => {});
   }, []);
 
   const totalWeightage = goals.reduce((s, g) => s + g.weightage, 0);
   const remainingWeightage = Math.max(0, 100 - totalWeightage);
 
-  const hasEditableGoals = goals.some(g => ['DRAFT','RETURNED'].includes(g.status));
-  const allApproved      = goals.length > 0 && goals.every(g => g.status === 'APPROVED');
-  const canSubmit = (
-    goals.filter(g => g.status === 'DRAFT').length > 0 &&
-    Math.round(totalWeightage) === 100
+  const hasEditableGoals = goals.some((g) =>
+    ["DRAFT", "RETURNED"].includes(g.status),
   );
+  const allApproved =
+    goals.length > 0 && goals.every((g) => g.status === "APPROVED");
+  const canSubmit =
+    goals.filter((g) => g.status === "DRAFT").length > 0 &&
+    Math.round(totalWeightage) === 100;
 
   const handleSave = async (data) => {
     try {
       if (editingGoal) {
         await updateGoal(editingGoal.id, data);
-        toast.success('Goal updated');
+        toast.success("Goal updated");
       } else {
         await createGoal(data);
-        toast.success('Goal added');
+        toast.success("Goal added");
       }
       setEditingGoal(null);
       fetchGoals();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save goal');
+      toast.error(err.response?.data?.error || "Failed to save goal");
       throw err; // keeps modal open on error
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this goal?')) return;
+    if (!confirm("Delete this goal?")) return;
     try {
       await deleteGoal(id);
-      toast.success('Goal deleted');
+      toast.success("Goal deleted");
       fetchGoals();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to delete goal');
+      toast.error(err.response?.data?.error || "Failed to delete goal");
     }
   };
 
   const handleSubmitAll = async () => {
-    if (!confirm('Submit all draft goals for manager approval? You cannot edit them after submission.')) return;
+    if (
+      !confirm(
+        "Submit all draft goals for manager approval? You cannot edit them after submission.",
+      )
+    )
+      return;
     try {
       const res = await submitAllGoals();
       toast.success(res.data.message);
       fetchGoals();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Submission failed');
+      toast.error(err.response?.data?.error || "Submission failed");
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-400">Loading your goals...</p>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-400">Loading your goals...</p>
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,13 +114,15 @@ export default function EmployeeDashboard() {
           <div>
             <h1 className="text-lg font-semibold text-gray-900">My Goals</h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              {cycle ? `${cycle.year} · ${cycle.phase}` : 'Active cycle'}
+              {cycle ? `${cycle.year} · ${cycle.phase}` : "Active cycle"}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-600">{user.name}</span>
-            <button onClick={logout}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <button
+              onClick={logout}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
               Sign out
             </button>
           </div>
@@ -127,21 +145,27 @@ export default function EmployeeDashboard() {
         {/* Action bar */}
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-gray-700">
-            {goals.length} goal{goals.length !== 1 ? 's' : ''} · {cycle?.year}
+            {goals.length} goal{goals.length !== 1 ? "s" : ""} · {cycle?.year}
           </h2>
           <div className="flex gap-3">
             {hasEditableGoals && goals.length < 8 && (
               <button
-                onClick={() => { setEditingGoal(null); setModalOpen(true); }}
+                onClick={() => {
+                  setEditingGoal(null);
+                  setModalOpen(true);
+                }}
                 className="text-sm px-4 py-2 bg-indigo-600 text-white rounded-lg
-                           hover:bg-indigo-700 transition-colors font-medium">
+                           hover:bg-indigo-700 transition-colors font-medium"
+              >
                 + Add goal
               </button>
             )}
             {canSubmit && (
-              <button onClick={handleSubmitAll}
+              <button
+                onClick={handleSubmitAll}
                 className="text-sm px-4 py-2 bg-green-600 text-white rounded-lg
-                           hover:bg-green-700 transition-colors font-medium">
+                           hover:bg-green-700 transition-colors font-medium"
+              >
                 Submit for approval
               </button>
             )}
@@ -157,18 +181,25 @@ export default function EmployeeDashboard() {
               Start by adding your first goal for this cycle.
             </p>
             <button
-              onClick={() => { setEditingGoal(null); setModalOpen(true); }}
-              className="text-sm px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              onClick={() => {
+                setEditingGoal(null);
+                setModalOpen(true);
+              }}
+              className="text-sm px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
               Add first goal
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {goals.map(goal => (
+            {goals.map((goal) => (
               <GoalCard
                 key={goal.id}
                 goal={goal}
-                onEdit={(g) => { setEditingGoal(g); setModalOpen(true); }}
+                onEdit={(g) => {
+                  setEditingGoal(g);
+                  setModalOpen(true);
+                }}
                 onDelete={handleDelete}
               />
             ))}
@@ -176,23 +207,28 @@ export default function EmployeeDashboard() {
         )}
 
         {/* Submission hint */}
-        {hasEditableGoals && Math.round(totalWeightage) !== 100 && goals.length > 0 && (
-          <p className="text-center text-xs text-gray-400">
-            Total weightage must equal 100% before you can submit.
-            Currently at {totalWeightage.toFixed(1)}%.
-          </p>
-        )}
+        {hasEditableGoals &&
+          Math.round(totalWeightage) !== 100 &&
+          goals.length > 0 && (
+            <p className="text-center text-xs text-gray-400">
+              Total weightage must equal 100% before you can submit. Currently
+              at {totalWeightage.toFixed(1)}%.
+            </p>
+          )}
       </main>
 
       <GoalFormModal
         isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingGoal(null); }}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingGoal(null);
+        }}
         onSave={handleSave}
         thrustAreas={thrustAreas}
         existingGoal={editingGoal}
         remainingWeightage={
           editingGoal
-            ? remainingWeightage + editingGoal.weightage  // add back current goal's weight when editing
+            ? remainingWeightage + editingGoal.weightage // add back current goal's weight when editing
             : remainingWeightage
         }
       />

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import EmployeeDashboard from './pages/employee/Dashboard';
+import ManagerDashboard from './pages/manager/Dashboard';
 
 const ManagerDashboard = () => <div className="p-8 text-xl">Manager Dashboard — Phase 3</div>;
 const AdminDashboard   = () => <div className="p-8 text-xl">Admin Dashboard — Phase 5</div>;
@@ -28,7 +29,11 @@ export default function App() {
           <AdminDashboard />
         </ProtectedRoute>
       } />
-
+      <Route path="/manager/*" element={
+      <ProtectedRoute roles={['MANAGER']}>
+        <ManagerDashboard />
+      </ProtectedRoute>
+    } />
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>
   );
