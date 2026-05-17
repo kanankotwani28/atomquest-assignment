@@ -1,42 +1,44 @@
-import { useEffect, useMemo, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
-import { getThrustAreas } from '../../api/goals';
+import { useEffect, useMemo, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
+import { getThrustAreas } from "../../api/goals";
 import {
   activateCycle,
   createCycle,
   downloadAchievementReport,
+  downloadAchievementCSV,
   getAdminGoals,
   getAdminUsers,
   getAuditLogs,
   getCompletionDashboard,
   getCycles,
   pushSharedGoal,
+  startCompletionStream,
   unlockGoal,
   updateUserManager,
-} from '../../api/admin';
+} from "../../api/admin";
 
 const UOM_OPTIONS = [
-  { value: 'NUMERIC_MIN', label: 'Higher is better' },
-  { value: 'NUMERIC_MAX', label: 'Lower is better' },
-  { value: 'TIMELINE', label: 'Timeline' },
-  { value: 'ZERO', label: 'Zero = Success' },
+  { value: "NUMERIC_MIN", label: "Higher is better" },
+  { value: "NUMERIC_MAX", label: "Lower is better" },
+  { value: "TIMELINE", label: "Timeline" },
+  { value: "ZERO", label: "Zero = Success" },
 ];
 
 const initialSharedGoal = {
-  title: '',
-  thrust_area_id: '',
-  uom_type: 'NUMERIC_MIN',
-  target: '',
-  weightage: '',
+  title: "",
+  thrust_area_id: "",
+  uom_type: "NUMERIC_MIN",
+  target: "",
+  weightage: "",
   employee_ids: [],
 };
 
 const initialCycle = {
   year: new Date().getFullYear(),
-  phase: 'Goal Setting',
-  start_date: '',
-  end_date: '',
+  phase: "Goal Setting",
+  start_date: "",
+  end_date: "",
   is_active: false,
 };
 
@@ -52,14 +54,16 @@ export default function AdminDashboard() {
   const [sharedGoal, setSharedGoal] = useState(initialSharedGoal);
   const [cycleForm, setCycleForm] = useState(initialCycle);
 
-  const employees = users.filter((u) => u.role === 'EMPLOYEE');
-  const managers = users.filter((u) => u.role === 'MANAGER');
+  const employees = users.filter((u) => u.role === "EMPLOYEE");
+  const managers = users.filter((u) => u.role === "MANAGER");
 
   const stats = useMemo(() => {
     const total = completion.length;
     const submitted = completion.filter((row) => row.goalsSubmitted).length;
     const approved = completion.filter((row) => row.goalsApproved).length;
-    const q1 = completion.filter((row) => row.checkInsCompleted?.includes('Q1')).length;
+    const q1 = completion.filter((row) =>
+      row.checkInsCompleted?.includes("Q1"),
+    ).length;
 
     return { total, submitted, approved, q1 };
   }, [completion]);
@@ -90,9 +94,23 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    let sseHandle;
+
     refresh()
-      .catch(() => toast.error('Failed to load admin dashboard'))
+      .catch(() => toast.error("Failed to load admin dashboard"))
       .finally(() => setLoading(false));
+
+    try {
+      sseHandle = startCompletionStream((payload) => {
+        if (payload?.data) setCompletion(payload.data);
+      });
+    } catch (e) {
+      console.error("Failed to start completion SSE", e);
+    }
+
+    return () => {
+      if (sseHandle?.close) sseHandle.close();
+    };
   }, []);
 
   const handleActivateCycle = async (id) => {
@@ -101,7 +119,7 @@ export default function AdminDashboard() {
       toast.success(res.data.message);
       await refresh();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to activate cycle');
+      toast.error(err.response?.data?.detail || "Failed to activate cycle");
     }
   };
 
@@ -109,11 +127,11 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       await createCycle(cycleForm);
-      toast.success('Cycle created');
+      toast.success("Cycle created");
       setCycleForm(initialCycle);
       await refresh();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create cycle');
+      toast.error(err.response?.data?.detail || "Failed to create cycle");
     }
   };
 
@@ -130,7 +148,7 @@ export default function AdminDashboard() {
       setSharedGoal(initialSharedGoal);
       await refresh();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to push shared goal');
+      toast.error(err.response?.data?.detail || "Failed to push shared goal");
     }
   };
 
@@ -146,10 +164,10 @@ export default function AdminDashboard() {
   const handleManagerChange = async (employeeId, managerId) => {
     try {
       await updateUserManager(employeeId, managerId);
-      toast.success('Manager updated');
+      toast.success("Manager updated");
       await refresh();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to update manager');
+      toast.error(err.response?.data?.detail || "Failed to update manager");
     }
   };
 
@@ -160,7 +178,7 @@ export default function AdminDashboard() {
       toast.success(res.data.message);
       await refresh();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to unlock goal');
+      toast.error(err.response?.data?.detail || "Failed to unlock goal");
     }
   };
 
@@ -168,7 +186,15 @@ export default function AdminDashboard() {
     try {
       await downloadAchievementReport();
     } catch {
-      toast.error('Failed to download report');
+      toast.error("Failed to download report");
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    try {
+      await downloadAchievementCSV();
+    } catch {
+      toast.error("Failed to download CSV");
     }
   };
 
@@ -189,7 +215,8 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              Cycles, shared goals, audit trail, exports, and completion oversight
+              Cycles, shared goals, audit trail, exports, and completion
+              oversight
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -200,7 +227,16 @@ export default function AdminDashboard() {
             >
               Export Excel
             </button>
-            <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600">
+            <button
+              onClick={handleDownloadCSV}
+              className="text-xs px-3 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={logout}
+              className="text-xs text-gray-400 hover:text-gray-600"
+            >
               Sign out
             </button>
           </div>
@@ -219,13 +255,17 @@ export default function AdminDashboard() {
           <Panel title="Cycle Management">
             <div className="space-y-3 mb-5">
               {cycles.map((cycle) => (
-                <div key={cycle.id} className="flex items-center justify-between border border-gray-200 rounded-lg p-3">
+                <div
+                  key={cycle.id}
+                  className="flex items-center justify-between border border-gray-200 rounded-lg p-3"
+                >
                   <div>
                     <p className="text-sm font-medium text-gray-900">
                       {cycle.year} · {cycle.phase}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {new Date(cycle.start_date).toLocaleDateString()} to {new Date(cycle.end_date).toLocaleDateString()}
+                      {new Date(cycle.start_date).toLocaleDateString()} to{" "}
+                      {new Date(cycle.end_date).toLocaleDateString()}
                     </p>
                   </div>
                   {cycle.is_active ? (
@@ -244,37 +284,50 @@ export default function AdminDashboard() {
               ))}
             </div>
 
-            <form onSubmit={handleCreateCycle} className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
+            <form
+              onSubmit={handleCreateCycle}
+              className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4"
+            >
               <input
                 type="number"
                 value={cycleForm.year}
-                onChange={(e) => setCycleForm({ ...cycleForm, year: e.target.value })}
+                onChange={(e) =>
+                  setCycleForm({ ...cycleForm, year: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Year"
               />
               <input
                 value={cycleForm.phase}
-                onChange={(e) => setCycleForm({ ...cycleForm, phase: e.target.value })}
+                onChange={(e) =>
+                  setCycleForm({ ...cycleForm, phase: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Phase"
               />
               <input
                 type="date"
                 value={cycleForm.start_date}
-                onChange={(e) => setCycleForm({ ...cycleForm, start_date: e.target.value })}
+                onChange={(e) =>
+                  setCycleForm({ ...cycleForm, start_date: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
               <input
                 type="date"
                 value={cycleForm.end_date}
-                onChange={(e) => setCycleForm({ ...cycleForm, end_date: e.target.value })}
+                onChange={(e) =>
+                  setCycleForm({ ...cycleForm, end_date: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
               <label className="flex items-center gap-2 text-xs text-gray-600">
                 <input
                   type="checkbox"
                   checked={cycleForm.is_active}
-                  onChange={(e) => setCycleForm({ ...cycleForm, is_active: e.target.checked })}
+                  onChange={(e) =>
+                    setCycleForm({ ...cycleForm, is_active: e.target.checked })
+                  }
                 />
                 Make active
               </label>
@@ -288,7 +341,9 @@ export default function AdminDashboard() {
             <form onSubmit={handlePushSharedGoal} className="space-y-3">
               <input
                 value={sharedGoal.title}
-                onChange={(e) => setSharedGoal({ ...sharedGoal, title: e.target.value })}
+                onChange={(e) =>
+                  setSharedGoal({ ...sharedGoal, title: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Shared goal title"
                 required
@@ -296,29 +351,42 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={sharedGoal.thrust_area_id}
-                  onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })}
+                  onChange={(e) =>
+                    setSharedGoal({
+                      ...sharedGoal,
+                      thrust_area_id: e.target.value,
+                    })
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                   required
                 >
                   <option value="">Thrust area</option>
                   {thrustAreas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.name}</option>
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
                   ))}
                 </select>
                 <select
                   value={sharedGoal.uom_type}
-                  onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })}
+                  onChange={(e) =>
+                    setSharedGoal({ ...sharedGoal, uom_type: e.target.value })
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   {UOM_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
                 <input
                   type="number"
                   step="any"
                   value={sharedGoal.target}
-                  onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })}
+                  onChange={(e) =>
+                    setSharedGoal({ ...sharedGoal, target: e.target.value })
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   placeholder="Target"
                   required
@@ -328,7 +396,9 @@ export default function AdminDashboard() {
                   min="10"
                   max="100"
                   value={sharedGoal.weightage}
-                  onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })}
+                  onChange={(e) =>
+                    setSharedGoal({ ...sharedGoal, weightage: e.target.value })
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   placeholder="Weightage"
                   required
@@ -337,14 +407,19 @@ export default function AdminDashboard() {
 
               <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
                 {employees.map((employee) => (
-                  <label key={employee.id} className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 last:border-b-0 text-sm">
+                  <label
+                    key={employee.id}
+                    className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 last:border-b-0 text-sm"
+                  >
                     <input
                       type="checkbox"
                       checked={sharedGoal.employee_ids.includes(employee.id)}
                       onChange={() => toggleRecipient(employee.id)}
                     />
                     <span>{employee.name}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{employee.department}</span>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {employee.department}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -377,9 +452,20 @@ export default function AdminDashboard() {
                       <td className="py-2 text-gray-900">{row.employee}</td>
                       <td className="text-gray-500">{row.department}</td>
                       <td>
-                        <StatusPill active={row.goalsApproved} label={row.goalsApproved ? 'Approved' : row.goalsSubmitted ? 'Submitted' : 'Open'} />
+                        <StatusPill
+                          active={row.goalsApproved}
+                          label={
+                            row.goalsApproved
+                              ? "Approved"
+                              : row.goalsSubmitted
+                                ? "Submitted"
+                                : "Open"
+                          }
+                        />
                       </td>
-                      <td className="text-gray-500">{row.checkInsCompleted?.join(', ') || 'None'}</td>
+                      <td className="text-gray-500">
+                        {row.checkInsCompleted?.join(", ") || "None"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -390,19 +476,30 @@ export default function AdminDashboard() {
           <Panel title="Org Hierarchy">
             <div className="space-y-3">
               {employees.map((employee) => (
-                <div key={employee.id} className="grid grid-cols-[1fr_180px] gap-3 items-center">
+                <div
+                  key={employee.id}
+                  className="grid grid-cols-[1fr_180px] gap-3 items-center"
+                >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{employee.name}</p>
-                    <p className="text-xs text-gray-400">{employee.email} · {employee.department}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {employee.name}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {employee.email} · {employee.department}
+                    </p>
                   </div>
                   <select
-                    value={employee.manager_id || ''}
-                    onChange={(e) => handleManagerChange(employee.id, e.target.value)}
+                    value={employee.manager_id || ""}
+                    onChange={(e) =>
+                      handleManagerChange(employee.id, e.target.value)
+                    }
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                   >
                     <option value="">No manager</option>
                     {managers.map((manager) => (
-                      <option key={manager.id} value={manager.id}>{manager.name}</option>
+                      <option key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -430,12 +527,17 @@ export default function AdminDashboard() {
                     <td className="py-2 text-gray-900">{goal.title}</td>
                     <td className="text-gray-500">{goal.owner}</td>
                     <td className="text-gray-500">{goal.thrustArea}</td>
-                    <td><StatusPill active={goal.status === 'APPROVED'} label={goal.status} /></td>
+                    <td>
+                      <StatusPill
+                        active={goal.status === "APPROVED"}
+                        label={goal.status}
+                      />
+                    </td>
                     <td className="text-gray-500">{goal.weightage}%</td>
                     <td className="text-right">
                       <button
                         onClick={() => handleUnlockGoal(goal)}
-                        disabled={goal.status !== 'APPROVED'}
+                        disabled={goal.status !== "APPROVED"}
                         className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40"
                       >
                         Unlock
@@ -464,12 +566,14 @@ export default function AdminDashboard() {
               <tbody>
                 {auditLogs.map((log) => (
                   <tr key={log.id} className="border-b border-gray-50">
-                    <td className="py-2 text-gray-500">{new Date(log.created_at).toLocaleString()}</td>
+                    <td className="py-2 text-gray-500">
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
                     <td className="text-gray-500">{log.goal_id}</td>
                     <td className="text-gray-900">{log.field}</td>
-                    <td className="text-gray-500">{log.old_value || '-'}</td>
-                    <td className="text-gray-500">{log.new_value || '-'}</td>
-                    <td className="text-gray-500">{log.reason || '-'}</td>
+                    <td className="text-gray-500">{log.old_value || "-"}</td>
+                    <td className="text-gray-500">{log.new_value || "-"}</td>
+                    <td className="text-gray-500">{log.reason || "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -501,9 +605,11 @@ function StatCard({ label, value }) {
 
 function StatusPill({ active, label }) {
   return (
-    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-      active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-    }`}>
+    <span
+      className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+        active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+      }`}
+    >
       {label}
     </span>
   );
