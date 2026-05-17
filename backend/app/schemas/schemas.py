@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, UUID4
+from pydantic import BaseModel, Field, UUID4 , model_validator
 from typing import Optional, List
 from typing import Optional, List
 from datetime import datetime
@@ -40,17 +40,36 @@ class GoalCreate(BaseModel):
     description:    Optional[str] = None
     thrust_area_id: UUID4
     uom_type:       UoMTypeEnum
-    target:         float    = Field(..., gt=0)
+    target:         float    = Field(..., ge=0)
     # ge=10: greater than or equal to 10 — BRD minimum weightage rule
     weightage:      float    = Field(..., ge=10, le=100)
 
+    @model_validator(mode='after')
+    def check_zero_uom_target(self):
+        # If UoM is ZERO, target MUST be 0 — anything else makes no sense
+        if self.uom_type == UoMTypeEnum.ZERO and self.target != 0:
+            raise ValueError("Target must be 0 for ZERO-type goals")
+        # If UoM is NOT ZERO, target must be positive
+        if self.uom_type != UoMTypeEnum.ZERO and self.target <= 0:
+            raise ValueError("Target must be greater than 0 for this UoM type")
+        return self
+
 class GoalUpdate(BaseModel):
-    title:          Optional[str]        = Field(None, min_length=3)
-    description:    Optional[str]        = None
-    thrust_area_id: Optional[UUID4]      = None
-    uom_type:       Optional[UoMTypeEnum]= None
-    target:         Optional[float]      = Field(None, gt=0)
-    weightage:      Optional[float]      = Field(None, ge=10, le=100)
+    title:          Optional[str]         = Field(None, min_length=3)
+    description:    Optional[str]         = None
+    thrust_area_id: Optional[UUID4]       = None
+    uom_type:       Optional[UoMTypeEnum] = None
+    target:         Optional[float]       = Field(None, ge=0)
+    weightage:      Optional[float]       = Field(None, ge=10, le=100)
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "title": "Updated goal title",
+                "weightage": 40
+            }]
+        }
+    }
 
 class ManagerGoalEdit(BaseModel):
     target:    Optional[float] = Field(None, gt=0)
