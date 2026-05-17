@@ -261,6 +261,33 @@ def push_team_shared_goal(body: SharedGoalPush,
             detail=f"Can only push goals to your direct reports: {', '.join(unauthorized)}"
         )
 
+    # Pre-check: ensure pushing this shared goal will not cause any employee's
+    # approved weightage to exceed 100%. Return structured error with details.
+    blocked = []
+    for emp in employees:
+        approved_total = db.query(func.sum(Goal.weightage)).filter(
+            Goal.owner_id == emp.id,
+            Goal.cycle_id == cycle.id,
+            Goal.status == GoalStatusEnum.APPROVED
+        ).scalar() or 0
+        after_total = approved_total + body.weightage
+        if after_total > 100:
+            blocked.append({
+                "id": str(emp.id),
+                "name": emp.name,
+                "email": emp.email,
+                "approved_total": approved_total,
+                "would_be": after_total
+            })
+    if blocked:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Cannot push shared goal — would exceed 100% approved weightage for some employees",
+                "blocked": blocked
+            }
+        )
+
     now = datetime.utcnow()
     primary_goal = None
     for emp in employees:

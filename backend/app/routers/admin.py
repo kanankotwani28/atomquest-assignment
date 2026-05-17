@@ -93,6 +93,24 @@ def push_shared_goal(body: SharedGoalPush,
     cycle = db.query(Cycle).filter(Cycle.is_active == True).first()
     if not cycle:
         raise HTTPException(404, "No active cycle")
+    # Pre-check (Option A): block push if adding this shared goal would
+    # cause an employee's APPROVED total to exceed 100% weightage.
+    blocked = []
+    for emp_id in body.employee_ids:
+        approved_total = db.query(func.sum(Goal.weightage)).filter(
+            Goal.owner_id == emp_id,
+            Goal.cycle_id == cycle.id,
+            Goal.status == GoalStatusEnum.APPROVED
+        ).scalar() or 0
+        if approved_total + body.weightage > 100:
+            emp = db.query(User).filter(User.id == emp_id).first()
+            blocked.append(emp.email if emp else str(emp_id))
+    if blocked:
+        raise HTTPException(
+            status_code=400,
+            detail=("Cannot push shared goal — would exceed 100% approved weightage for: "
+                    + ", ".join(blocked))
+        )
 
     created = []
     primary_goal = None

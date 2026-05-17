@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
-import { getTeamGoals, approveGoals, returnGoal, pushTeamSharedGoal } from "../../api/manager";
+import {
+  getTeamGoals,
+  approveGoals,
+  returnGoal,
+  pushTeamSharedGoal,
+} from "../../api/manager";
 import EmployeeGoalCard from "../../components/EmployeeGoalCard";
 import ReturnReasonModal from "../../components/ReturnReasonModal";
 import toast, { Toaster } from "react-hot-toast";
@@ -99,7 +104,15 @@ export default function ManagerDashboard() {
       setSharedGoal(initialSharedGoal);
       fetchTeam();
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to push KPI");
+      const detail = err.response?.data?.detail;
+      if (detail && detail.blocked) {
+        const list = detail.blocked
+          .map((b) => `${b.name} (${b.approved_total}% → ${b.would_be}%)`)
+          .join(", ");
+        toast.error(`${detail.message}: ${list}`);
+      } else {
+        toast.error(detail?.message || detail || "Failed to push KPI");
+      }
     }
   };
 
@@ -181,7 +194,9 @@ export default function ManagerDashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Departmental KPI Push</h2>
+              <h2 className="text-sm font-semibold text-gray-900">
+                Departmental KPI Push
+              </h2>
               <p className="text-xs text-gray-500 mt-0.5">
                 Push an approved shared goal to selected direct reports.
               </p>
@@ -191,7 +206,9 @@ export default function ManagerDashboard() {
           <form onSubmit={handlePushSharedGoal} className="space-y-3">
             <input
               value={sharedGoal.title}
-              onChange={(e) => setSharedGoal({ ...sharedGoal, title: e.target.value })}
+              onChange={(e) =>
+                setSharedGoal({ ...sharedGoal, title: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               placeholder="KPI title"
               required
@@ -199,29 +216,42 @@ export default function ManagerDashboard() {
             <div className="grid grid-cols-4 gap-3">
               <select
                 value={sharedGoal.thrust_area_id}
-                onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })}
+                onChange={(e) =>
+                  setSharedGoal({
+                    ...sharedGoal,
+                    thrust_area_id: e.target.value,
+                  })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                 required
               >
                 <option value="">Thrust area</option>
                 {thrustAreas.map((area) => (
-                  <option key={area.id} value={area.id}>{area.name}</option>
+                  <option key={area.id} value={area.id}>
+                    {area.name}
+                  </option>
                 ))}
               </select>
               <select
                 value={sharedGoal.uom_type}
-                onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })}
+                onChange={(e) =>
+                  setSharedGoal({ ...sharedGoal, uom_type: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
               >
                 {UOM_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
               <input
                 type="number"
                 step="any"
                 value={sharedGoal.target}
-                onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })}
+                onChange={(e) =>
+                  setSharedGoal({ ...sharedGoal, target: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Target"
                 required
@@ -231,7 +261,9 @@ export default function ManagerDashboard() {
                 min="10"
                 max="100"
                 value={sharedGoal.weightage}
-                onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })}
+                onChange={(e) =>
+                  setSharedGoal({ ...sharedGoal, weightage: e.target.value })
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Weightage"
                 required
@@ -240,7 +272,10 @@ export default function ManagerDashboard() {
 
             <div className="flex flex-wrap gap-2">
               {team.map(({ employee }) => (
-                <label key={employee.id} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-xs">
+                <label
+                  key={employee.id}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-xs"
+                >
                   <input
                     type="checkbox"
                     checked={sharedGoal.employee_ids.includes(employee.id)}
