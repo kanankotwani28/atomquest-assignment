@@ -114,26 +114,44 @@ def delete_goal(goal_id: str,
 def submit_all(db: Session = Depends(get_db),
                current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
     cycle = get_active_cycle(db)
-    drafts = db.query(Goal).filter(
+
+    # FIXED: include RETURNED goals — employee may resubmit after rework
+    submittable = db.query(Goal).filter(
         Goal.owner_id == current_user.id,
         Goal.cycle_id == cycle.id,
-        Goal.status == GoalStatusEnum.DRAFT
+        Goal.status.in_([GoalStatusEnum.DRAFT, GoalStatusEnum.RETURNED])
     ).all()
 
-    if not drafts:
-        raise HTTPException(status_code=400, detail="No draft goals to submit")
+    if not submittable:
+        raise HTTPException(
+            status_code=400,
+            detail="No draft or returned goals to submit"
+        )
 
-    total = sum(g.weightage for g in drafts)
+    # Check total weightage across ALL non-approved goals
+    # Include already-submitted goals in the weightage total
+    all_active_goals = db.query(Goal).filter(
+        Goal.owner_id == current_user.id,
+        Goal.cycle_id == cycle.id,
+        Goal.status.in_([
+            GoalStatusEnum.DRAFT,
+            GoalStatusEnum.SUBMITTED,
+            GoalStatusEnum.RETURNED
+        ])
+    ).all()
+
+    total = sum(g.weightage for g in all_active_goals)
     if round(total) != 100:
         raise HTTPException(
             status_code=400,
             detail=f"Total weightage is {total}%. Must equal exactly 100% before submission."
         )
 
-    for g in drafts:
+    for g in submittable:
         g.status = GoalStatusEnum.SUBMITTED
+
     db.commit()
-    return {"message": f"{len(drafts)} goal(s) submitted for approval"}
+    return {"message": f"{len(submittable)} goal(s) submitted for approval"}
 
 # ── Manager: get team goals ───────────────────────────────────────
 @router.get("/team")
@@ -170,12 +188,30 @@ def approve_goals(payload: dict,
         raise HTTPException(status_code=400, detail="employeeId required")
 
     employee = db.query(User).filter(
-        User.id == employee_id, User.manager_id == current_user.id
+        User.id == employee_id,
+        User.manager_id == current_user.id
     ).first()
     if not employee:
         raise HTTPException(status_code=403, detail="Employee not in your team")
 
     cycle = get_active_cycle(db)
+
+    # Check no goals are still RETURNED or DRAFT — must all be SUBMITTED
+    blocking_goals = db.query(Goal).filter(
+        Goal.owner_id == employee_id,
+        Goal.cycle_id == cycle.id,
+        Goal.status.in_([GoalStatusEnum.RETURNED, GoalStatusEnum.DRAFT])
+    ).all()
+
+    if blocking_goals:
+        blocking_titles = [g.title for g in blocking_goals]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve — {len(blocking_goals)} goal(s) still need resubmission: "
+                   f"{', '.join(blocking_titles)}"
+        )
+
+    # Now fetch only submitted goals
     submitted = db.query(Goal).filter(
         Goal.owner_id == employee_id,
         Goal.cycle_id == cycle.id,
@@ -185,16 +221,20 @@ def approve_goals(payload: dict,
     if not submitted:
         raise HTTPException(status_code=400, detail="No submitted goals to approve")
 
+    # Final weightage check
     total = sum(g.weightage for g in submitted)
     if round(total) != 100:
-        raise HTTPException(status_code=400,
-            detail=f"Cannot approve — total weightage is {total}%, must be 100%")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve — total weightage is {total}%, must be 100%"
+        )
 
     now = datetime.utcnow()
     for g in submitted:
         g.status    = GoalStatusEnum.APPROVED
         g.locked_at = now
-        log_change(db, g.id, current_user.id, "status", "SUBMITTED", "APPROVED", "Approved by manager")
+        log_change(db, g.id, current_user.id,
+                   "status", "SUBMITTED", "APPROVED", "Approved by manager")
 
     db.commit()
     return {"message": f"{len(submitted)} goal(s) approved and locked"}
