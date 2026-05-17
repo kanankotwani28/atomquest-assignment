@@ -39,7 +39,22 @@ def calculate_score(uom_type, target, actual, completion_date):
 
     if uom_type == UoMTypeEnum.TIMELINE:
         if not completion_date: return None
-        deadline = datetime.fromtimestamp(target)
+        # Accept either ISO string, seconds timestamp, or milliseconds timestamp
+        if isinstance(target, str):
+            try:
+                deadline = datetime.fromisoformat(target)
+            except Exception:
+                try:
+                    deadline = datetime.fromtimestamp(float(target))
+                except Exception:
+                    return None
+        else:
+            ts = float(target)
+            # heuristics: if ts looks like milliseconds (greater than 1e12), divide
+            if ts > 1e12:
+                deadline = datetime.fromtimestamp(ts / 1000.0)
+            else:
+                deadline = datetime.fromtimestamp(ts)
         if completion_date <= deadline: return 100.0
         days_late = (completion_date - deadline).days
         return max(0.0, round(100 - days_late * 5, 2))
