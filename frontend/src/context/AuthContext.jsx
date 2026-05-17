@@ -1,34 +1,57 @@
-import axios from 'axios';
+import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../api/axios';
 
-// Why a base instance: you set the base URL once here.
-// Every API file imports this — if you ever change the URL,
-// you change it in exactly one place.
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-});
+// Why context: user info (who is logged in, what role)
+// is needed by many components across the app.
+// Instead of passing it as props through every level (prop drilling),
+// context makes it available anywhere with one line.
+const AuthContext = createContext(null);
 
-// Request interceptor: before every request, attach the token
-// This runs automatically — no need to manually add headers in every call
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // true while checking existing session
 
-// Response interceptor: if any request gets a 401,
-// clear storage and redirect to login
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  // On app load: check if a token exists and is still valid
+  // This restores the session after a page refresh
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.get('/auth/me')
+        .then(res => setUser(res.data))
+        .catch(() => {
+          // Token expired or invalid — clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    return Promise.reject(error);
-  }
-);
+  }, []);
 
-export default api;
+  const login = async (email, password) => {
+    const res = await api.post('/auth/login', { email, password });
+    localStorage.setItem('token', res.data.token);
+    setUser(res.data.user);
+    return res.data.user; // return user so caller knows the role to redirect
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Custom hook — components call useAuth() instead of useContext(AuthContext)
+// Cleaner and gives a helpful error if used outside the provider
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used inside AuthProvider');
+  return context;
+};
