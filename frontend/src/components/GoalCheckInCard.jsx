@@ -11,7 +11,12 @@ const QUARTER_LABELS = {
   Q4: "March / April",
 };
 
-export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
+export default function GoalCheckInCard({
+  goal,
+  currentQuarter,
+  onSaved,
+  allowCheckinOutsideWindow = false,
+}) {
   const [activeQuarter, setActiveQuarter] = useState(currentQuarter || "Q1");
 
   // Map existing check-ins by quarter for O(1) lookup and normalize fields
@@ -35,9 +40,10 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
   const isPrimarySharedOwner =
     !goal.isShared || !goal.sharedFromId || goal.id === goal.sharedFromId;
   const canEditActiveQuarter =
-    !!currentQuarter &&
-    activeQuarter === currentQuarter &&
-    isPrimarySharedOwner;
+    isPrimarySharedOwner &&
+    (allowCheckinOutsideWindow
+      ? true
+      : !!currentQuarter && activeQuarter === currentQuarter);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">

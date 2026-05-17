@@ -12,6 +12,11 @@ from app.services.audit_logger import log_change
 from io import BytesIO
 import openpyxl, uuid
 from datetime import datetime
+import csv
+import io
+import json
+import asyncio
+from app.database import SessionLocal
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -196,6 +201,78 @@ def achievement_report(db: Session = Depends(get_db),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=achievement_report.xlsx"}
     )
+
+
+@router.get("/reports/achievement/csv")
+def achievement_report_csv(db: Session = Depends(get_db),
+                           _=Depends(require_role(RoleEnum.ADMIN))):
+    cycle = db.query(Cycle).filter(Cycle.is_active == True).first()
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    headers = ["Employee", "Department", "Goal Title", "Thrust Area",
+               "UoM", "Target", "Weightage",
+               "Q1 Actual", "Q1 Score",
+               "Q2 Actual", "Q2 Score",
+               "Q3 Actual", "Q3 Score",
+               "Q4 Actual", "Q4 Score"]
+    writer.writerow(headers)
+
+    employees = db.query(User).filter(User.role == RoleEnum.EMPLOYEE).all()
+    for emp in employees:
+        goals = db.query(Goal).filter(
+            Goal.owner_id == emp.id, Goal.cycle_id == cycle.id
+        ).all()
+        for g in goals:
+            ci_map = {ci.quarter: ci for ci in g.check_ins}
+            row = [
+                emp.name, emp.department or "",
+                g.title, g.thrust_area.name if g.thrust_area else "",
+                g.uom_type.value, g.target, g.weightage
+            ]
+            for q in ["Q1", "Q2", "Q3", "Q4"]:
+                ci = ci_map.get(q)
+                row.extend([ci.actual if ci else "", ci.score if ci else ""])
+            writer.writerow(row)
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=achievement_report.csv"}
+    )
+
+
+@router.get('/completion/stream')
+def completion_stream(_=Depends(require_role(RoleEnum.ADMIN))):
+    async def event_generator():
+        while True:
+            db = SessionLocal()
+            try:
+                cycle = db.query(Cycle).filter(Cycle.is_active == True).first()
+                employees = db.query(User).filter(User.role == RoleEnum.EMPLOYEE).all()
+                results = []
+                for emp in employees:
+                    goals = db.query(Goal).filter(Goal.owner_id == emp.id, Goal.cycle_id == cycle.id).all()
+                    submitted = any(g.status in [GoalStatusEnum.SUBMITTED, GoalStatusEnum.APPROVED] for g in goals)
+                    approved = all(g.status == GoalStatusEnum.APPROVED for g in goals) and len(goals) > 0
+                    checkin_quarters = set()
+                    for g in goals:
+                        for ci in g.check_ins:
+                            checkin_quarters.add(ci.quarter)
+                    results.append({
+                        "employee": {"id": str(emp.id), "name": emp.name, "email": emp.email},
+                        "goalsSubmitted": submitted,
+                        "goalsApproved": approved,
+                        "checkInsCompleted": sorted(checkin_quarters)
+                    })
+                payload = f"data: {json.dumps({'team': results})}\n\n"
+                yield payload
+            finally:
+                db.close()
+            await asyncio.sleep(5)
+
+    return StreamingResponse(event_generator(), media_type='text/event-stream')
 
 # ── Cycle management ──────────────────────────────────────────────
 @router.get("/cycles")

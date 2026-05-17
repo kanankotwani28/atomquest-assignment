@@ -7,6 +7,7 @@ from app.schemas.schemas import CheckInCreate, CommentAdd
 from app.dependencies import get_current_user, require_role
 from app.services.scoring_engine import calculate_score
 from datetime import datetime
+from app.config import settings
 
 router = APIRouter(prefix="/checkins", tags=["Check-ins"])
 
@@ -62,13 +63,18 @@ def upsert_checkin(body: CheckInCreate,
         raise HTTPException(400, "Check-ins only allowed on approved goals")
 
     current_quarter = get_current_quarter()
-    if current_quarter is None:
-        raise HTTPException(400, "Check-in window is closed. May/June is goal-setting phase.")
-    if body.quarter != current_quarter:
-        raise HTTPException(
-            400,
-            f"{body.quarter} check-in is not open. Current open window is {current_quarter}."
-        )
+    # Allow bypass in dev/testing via env flag
+    if not settings.allow_checkin_outside_window:
+        if current_quarter is None:
+            raise HTTPException(400, "Check-in window is closed. May/June is goal-setting phase.")
+        if body.quarter != current_quarter:
+            raise HTTPException(
+                400,
+                f"{body.quarter} check-in is not open. Current open window is {current_quarter}."
+            )
+    else:
+        # In permissive mode, accept the requested quarter if provided
+        current_quarter = body.quarter or current_quarter
 
     score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
 
@@ -109,7 +115,12 @@ def get_my_checkins(db: Session = Depends(get_db),
                        Goal.cycle_id == cycle.id,
                        Goal.status == GoalStatusEnum.APPROVED)
                .all())
-    return {"goals": goals, "currentQuarter": get_current_quarter(), "cycle": cycle}
+    return {
+        "goals": goals,
+        "currentQuarter": get_current_quarter(),
+        "cycle": cycle,
+        "allowCheckinOutsideWindow": settings.allow_checkin_outside_window
+    }
 
 # ── Manager: team check-ins ───────────────────────────────────────
 @router.get("/team")
