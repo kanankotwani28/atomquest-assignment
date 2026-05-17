@@ -104,6 +104,7 @@ class GoalOut(BaseModel):
     weightage:      float
     status:         GoalStatusEnum
     is_shared:      bool
+    shared_from_id: Optional[UUID4]
     locked_at:      Optional[datetime]
     created_at:     datetime
     thrust_area:    Optional[ThrustAreaOut]

@@ -8,11 +8,34 @@ from app.models.models import (Goal, GoalStatusEnum, User, RoleEnum,
                                 Cycle, AuditLog, CheckIn, ThrustArea)
 from app.schemas.schemas import SharedGoalPush, AuditLogOut
 from app.dependencies import require_role
+from app.services.audit_logger import log_change
 from io import BytesIO
 import openpyxl, uuid
 from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+def mark_sheet_for_revision(db: Session, employee_id, cycle_id, changed_by_id):
+    approved_goals = db.query(Goal).filter(
+        Goal.owner_id == employee_id,
+        Goal.cycle_id == cycle_id,
+        Goal.status == GoalStatusEnum.APPROVED
+    ).all()
+
+    for goal in approved_goals:
+        goal.status = GoalStatusEnum.REVISION_REQUIRED
+        goal.locked_at = None
+        log_change(
+            db,
+            goal.id,
+            changed_by_id,
+            "status",
+            "APPROVED",
+            "REVISION_REQUIRED",
+            "Shared KPI added; employee must rebalance weightage"
+        )
+
+    return bool(approved_goals)
 
 # ── Completion dashboard ──────────────────────────────────────────
 @router.get("/completion")
@@ -72,7 +95,9 @@ def push_shared_goal(body: SharedGoalPush,
         raise HTTPException(404, "No active cycle")
 
     created = []
+    primary_goal = None
     for emp_id in body.employee_ids:
+        needs_revision = mark_sheet_for_revision(db, emp_id, cycle.id, current_user.id)
         goal = Goal(
             title          = body.title,
             thrust_area_id = str(body.thrust_area_id),
@@ -82,10 +107,26 @@ def push_shared_goal(body: SharedGoalPush,
             owner_id       = str(emp_id),
             cycle_id       = cycle.id,
             is_shared      = True,
-            status         = GoalStatusEnum.APPROVED,  # shared goals pre-approved
-            locked_at      = datetime.utcnow()
+            status         = GoalStatusEnum.REVISION_REQUIRED if needs_revision else GoalStatusEnum.APPROVED,
+            locked_at      = None if needs_revision else datetime.utcnow()
         )
         db.add(goal)
+        db.flush()
+        if primary_goal is None:
+            primary_goal = goal
+            primary_goal.shared_from_id = primary_goal.id
+        else:
+            goal.shared_from_id = primary_goal.id
+        if needs_revision:
+            log_change(
+                db,
+                goal.id,
+                current_user.id,
+                "status",
+                "APPROVED",
+                "REVISION_REQUIRED",
+                "Shared KPI added; employee must rebalance weightage"
+            )
         created.append(str(emp_id))
 
     db.commit()

@@ -14,6 +14,8 @@ const normalizeGoal = (goal) => {
     ...goal,
     uomType: goal.uomType ?? goal.uom_type,
     thrustArea: goal.thrustArea ?? goal.thrust_area,
+    isShared: goal.isShared ?? goal.is_shared ?? false,
+    sharedFromId: goal.sharedFromId ?? goal.shared_from_id ?? null,
     checkIns: checkIns.map(normalizeCheckIn),
   };
 };

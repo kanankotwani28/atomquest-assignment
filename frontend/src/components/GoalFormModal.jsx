@@ -41,6 +41,13 @@ const goalSchema = z
     }),
   );
 
+const sharedGoalSchema = z.object({
+  weightage: z.coerce
+    .number()
+    .min(10, "Minimum weightage is 10%")
+    .max(100, "Maximum weightage is 100%"),
+});
+
 const UOM_OPTIONS = [
   { value: "NUMERIC_MIN", label: "Numeric — Higher is better (e.g. Revenue)" },
   { value: "NUMERIC_MAX", label: "Numeric — Lower is better (e.g. TAT, Cost)" },
@@ -57,6 +64,9 @@ export default function GoalFormModal({
   remainingWeightage,
 }) {
   const isEditing = !!existingGoal;
+  const isSharedGoal = !!existingGoal?.isShared;
+  const isRevisionGoal = existingGoal?.status === "REVISION_REQUIRED";
+  const weightageOnly = isSharedGoal || isRevisionGoal;
 
   const {
     register,
@@ -65,7 +75,7 @@ export default function GoalFormModal({
     watch,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(goalSchema),
+    resolver: zodResolver(weightageOnly ? sharedGoalSchema : goalSchema),
     defaultValues: existingGoal || {
       title: "",
       description: "",
@@ -104,7 +114,7 @@ export default function GoalFormModal({
   const onSubmit = async (data) => {
     console.log("Form data before sending:", data);
     try {
-      await onSave(data);
+      await onSave(weightageOnly ? { weightage: data.weightage } : data);
       onClose();
     } catch (err) {
       console.error("Save error caught in form:", err);
@@ -120,7 +130,7 @@ export default function GoalFormModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">
-            {isEditing ? "Edit Goal" : "Add New Goal"}
+            {weightageOnly ? "Adjust Weightage" : isEditing ? "Edit Goal" : "Add New Goal"}
           </h2>
           <button
             onClick={onClose}
@@ -138,8 +148,10 @@ export default function GoalFormModal({
             </label>
             <input
               {...register("title")}
+              readOnly={weightageOnly}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500
+                         read-only:bg-gray-100 read-only:text-gray-500"
               placeholder="e.g. Achieve quarterly sales target"
             />
             {errors.title && (
@@ -157,8 +169,10 @@ export default function GoalFormModal({
             <textarea
               {...register("description")}
               rows={2}
+              readOnly={weightageOnly}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none
+                         read-only:bg-gray-100 read-only:text-gray-500"
               placeholder="Optional details about this goal"
             />
           </div>
@@ -170,8 +184,10 @@ export default function GoalFormModal({
             </label>
             <select
               {...register("thrust_area_id")}
+              disabled={weightageOnly}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white
+                         disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="">Select thrust area...</option>
               {thrustAreas.map((ta) => (
@@ -194,8 +210,10 @@ export default function GoalFormModal({
             </label>
             <select
               {...register("uom_type")}
+              disabled={weightageOnly}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white
+                         disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="">Select UoM type...</option>
               {UOM_OPTIONS.map((opt) => (
@@ -233,8 +251,10 @@ export default function GoalFormModal({
                 {...register("target")}
                 type="number"
                 step="any"
+                readOnly={weightageOnly}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           focus:outline-none focus:ring-2 focus:ring-indigo-500
+                           read-only:bg-gray-100 read-only:text-gray-500"
                 placeholder={watchedUom === "ZERO" ? "0" : "e.g. 1000000"}
               />
               {errors.target && (
@@ -285,7 +305,9 @@ export default function GoalFormModal({
                          font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               {isSubmitting
-                ? "Saving..."
+                  ? "Saving..."
+                : weightageOnly
+                  ? "Save weightage"
                 : isEditing
                   ? "Save changes"
                   : "Add goal"}

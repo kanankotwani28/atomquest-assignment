@@ -23,6 +23,31 @@ def get_current_quarter() -> str | None:
     if 3  <= m <= 4:  return "Q4"
     return None  # May/June is goal-setting phase; no check-in window.
 
+def upsert_checkin_record(db, goal, body, score):
+    existing = db.query(CheckIn).filter(
+        CheckIn.goal_id == goal.id,
+        CheckIn.quarter == body.quarter
+    ).first()
+
+    if existing:
+        existing.actual          = body.actual
+        existing.completion_date = body.completion_date
+        existing.progress_status = body.progress_status
+        existing.score           = score
+        existing.updated_at      = datetime.utcnow()
+        return existing
+
+    ci = CheckIn(
+        goal_id         = goal.id,
+        quarter         = body.quarter,
+        actual          = body.actual,
+        completion_date = body.completion_date,
+        progress_status = body.progress_status,
+        score           = score
+    )
+    db.add(ci)
+    return ci
+
 # ── Employee: upsert check-in 
 @router.post("/")
 def upsert_checkin(body: CheckInCreate,
@@ -47,34 +72,32 @@ def upsert_checkin(body: CheckInCreate,
 
     score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
 
-    # Try to find existing check-in for this goal + quarter
-    existing = db.query(CheckIn).filter(
-        CheckIn.goal_id == str(body.goal_id),
-        CheckIn.quarter == body.quarter
-    ).first()
+    if goal.is_shared and goal.shared_from_id:
+        if str(goal.id) != str(goal.shared_from_id):
+            raise HTTPException(
+                403,
+                "Shared KPI achievement updates can be entered only by the primary owner."
+            )
 
-    if existing:
-        existing.actual          = body.actual
-        existing.completion_date = body.completion_date
-        existing.progress_status = body.progress_status
-        existing.score           = score
-        existing.updated_at      = datetime.utcnow()
-        db.commit()
-        db.refresh(existing)
-        return existing
-    else:
-        ci = CheckIn(
-            goal_id         = str(body.goal_id),
-            quarter         = body.quarter,
-            actual          = body.actual,
-            completion_date = body.completion_date,
-            progress_status = body.progress_status,
-            score           = score
-        )
-        db.add(ci)
-        db.commit()
-        db.refresh(ci)
-        return ci
+    saved = upsert_checkin_record(db, goal, body, score)
+
+    if goal.is_shared and goal.shared_from_id:
+        linked_goals = db.query(Goal).filter(
+            Goal.shared_from_id == goal.shared_from_id,
+            Goal.id != goal.id
+        ).all()
+        for linked_goal in linked_goals:
+            linked_score = calculate_score(
+                linked_goal.uom_type,
+                linked_goal.target,
+                body.actual,
+                body.completion_date
+            )
+            upsert_checkin_record(db, linked_goal, body, linked_score)
+
+    db.commit()
+    db.refresh(saved)
+    return saved
 
 # ── Employee: get my check-ins ────────────────────────────────────
 @router.get("/my")

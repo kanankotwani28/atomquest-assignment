@@ -53,12 +53,12 @@ export default function EmployeeDashboard() {
   const remainingWeightage = Math.max(0, 100 - totalWeightage);
 
   const hasEditableGoals = goals.some((g) =>
-    ["DRAFT", "RETURNED"].includes(g.status),
+    ["DRAFT", "RETURNED", "REVISION_REQUIRED"].includes(g.status),
   );
   const allApproved =
     goals.length > 0 && goals.every((g) => g.status === "APPROVED");
   const canSubmit =
-    goals.filter((g) => g.status === "DRAFT").length > 0 &&
+    goals.some((g) => ["DRAFT", "RETURNED", "REVISION_REQUIRED"].includes(g.status)) &&
     Math.round(totalWeightage) === 100;
 
   const handleSave = async (data) => {
@@ -110,7 +110,7 @@ export default function EmployeeDashboard() {
       toast.success(res.data.message);
       fetchGoals();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Submission failed");
+      toast.error(err.response?.data?.detail || err.response?.data?.error || "Submission failed");
     }
   };
 
@@ -161,6 +161,17 @@ export default function EmployeeDashboard() {
           <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-4">
             <p className="text-green-700 text-sm font-medium">
               ✓ All goals approved by your manager
+            </p>
+          </div>
+        )}
+
+        {goals.some((g) => g.status === "REVISION_REQUIRED") && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl px-5 py-4">
+            <p className="text-orange-700 text-sm font-medium">
+              Revision required after shared KPI assignment
+            </p>
+            <p className="text-orange-600 text-xs mt-1">
+              Rebalance weightages so the sheet totals 100%, then submit for manager re-approval.
             </p>
           </div>
         )}

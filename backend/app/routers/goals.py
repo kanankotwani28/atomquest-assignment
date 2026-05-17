@@ -17,6 +17,28 @@ def get_active_cycle(db: Session) -> Cycle:
         raise HTTPException(status_code=404, detail="No active cycle found")
     return cycle
 
+def mark_sheet_for_revision(db: Session, employee_id, cycle_id, changed_by_id):
+    approved_goals = db.query(Goal).filter(
+        Goal.owner_id == employee_id,
+        Goal.cycle_id == cycle_id,
+        Goal.status == GoalStatusEnum.APPROVED
+    ).all()
+
+    for goal in approved_goals:
+        goal.status = GoalStatusEnum.REVISION_REQUIRED
+        goal.locked_at = None
+        log_change(
+            db,
+            goal.id,
+            changed_by_id,
+            "status",
+            "APPROVED",
+            "REVISION_REQUIRED",
+            "Shared KPI added; employee must rebalance weightage"
+        )
+
+    return bool(approved_goals)
+
 # ── Thrust areas ──────────────────────────────────────────────────
 @router.get("/thrust-areas", response_model=List[ThrustAreaOut])
 def get_thrust_areas(db: Session = Depends(get_db),
@@ -80,7 +102,14 @@ def update_goal(goal_id: str, body: GoalUpdate,
         raise HTTPException(status_code=404, detail="Goal not found")
     if str(goal.owner_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Not your goal")
-    if goal.status not in [GoalStatusEnum.DRAFT, GoalStatusEnum.RETURNED]:
+    update_data = body.model_dump(exclude_unset=True)
+    if goal.is_shared or goal.status == GoalStatusEnum.REVISION_REQUIRED:
+        if set(update_data.keys()) != {"weightage"}:
+            raise HTTPException(
+                status_code=400,
+                detail="Revision mode allows weightage changes only. Title, target, UoM and thrust area are read-only."
+            )
+    elif goal.status not in [GoalStatusEnum.DRAFT, GoalStatusEnum.RETURNED]:
         raise HTTPException(status_code=400, detail="Cannot edit submitted or approved goal")
 
     if body.weightage is not None:
@@ -96,11 +125,14 @@ def update_goal(goal_id: str, body: GoalUpdate,
 
     # If this goal was RETURNED and the employee edits it, automatically mark it SUBMITTED
     was_returned = (goal.status == GoalStatusEnum.RETURNED)
+    was_revision = (goal.status == GoalStatusEnum.REVISION_REQUIRED)
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in update_data.items():
         setattr(goal, field, value)
 
-    if was_returned:
+    if was_returned and not goal.is_shared:
+        goal.status = GoalStatusEnum.SUBMITTED
+    if was_revision:
         goal.status = GoalStatusEnum.SUBMITTED
 
     db.commit()
@@ -132,7 +164,7 @@ def submit_all(db: Session = Depends(get_db),
     submittable = db.query(Goal).filter(
         Goal.owner_id == current_user.id,
         Goal.cycle_id == cycle.id,
-        Goal.status.in_([GoalStatusEnum.DRAFT, GoalStatusEnum.RETURNED])
+        Goal.status.in_([GoalStatusEnum.DRAFT, GoalStatusEnum.RETURNED, GoalStatusEnum.REVISION_REQUIRED])
     ).all()
 
     if not submittable:
@@ -149,7 +181,8 @@ def submit_all(db: Session = Depends(get_db),
         Goal.status.in_([
             GoalStatusEnum.DRAFT,
             GoalStatusEnum.SUBMITTED,
-            GoalStatusEnum.RETURNED
+            GoalStatusEnum.RETURNED,
+            GoalStatusEnum.REVISION_REQUIRED
         ])
     ).all()
 
@@ -184,6 +217,7 @@ def get_team_goals(db: Session = Depends(get_db),
         total_w   = sum(g.weightage for g in goals)
         submitted = sum(1 for g in goals if g.status == GoalStatusEnum.SUBMITTED)
         approved  = sum(1 for g in goals if g.status == GoalStatusEnum.APPROVED)
+        revision  = sum(1 for g in goals if g.status == GoalStatusEnum.REVISION_REQUIRED)
 
         team.append({
             "employee": {
@@ -197,7 +231,8 @@ def get_team_goals(db: Session = Depends(get_db),
             "goals":          goals,
             "totalWeightage": total_w,
             "submittedCount": submitted,
-            "approvedCount":  approved
+            "approvedCount":  approved,
+            "revisionCount":  revision
         })
 
     return {"team": team, "cycle": cycle}
@@ -208,15 +243,17 @@ def push_team_shared_goal(body: SharedGoalPush,
                           current_user: User = Depends(require_role(RoleEnum.MANAGER))):
     cycle = get_active_cycle(db)
     requested_ids = {str(emp_id) for emp_id in body.employee_ids}
-    employees = db.query(User).filter(
+    found_employees = db.query(User).filter(
         User.id.in_(requested_ids),
         User.role == RoleEnum.EMPLOYEE
     ).all()
 
-    found_ids = {str(emp.id) for emp in employees}
+    found_ids = {str(emp.id) for emp in found_employees}
     if found_ids != requested_ids:
         raise HTTPException(status_code=404, detail="One or more employees were not found")
 
+    employees_by_id = {str(emp.id): emp for emp in found_employees}
+    employees = [employees_by_id[str(emp_id)] for emp_id in body.employee_ids]
     unauthorized = [emp.name for emp in employees if str(emp.manager_id) != str(current_user.id)]
     if unauthorized:
         raise HTTPException(
@@ -225,7 +262,9 @@ def push_team_shared_goal(body: SharedGoalPush,
         )
 
     now = datetime.utcnow()
+    primary_goal = None
     for emp in employees:
+        needs_revision = mark_sheet_for_revision(db, emp.id, cycle.id, current_user.id)
         goal = Goal(
             title=body.title,
             thrust_area_id=str(body.thrust_area_id),
@@ -235,10 +274,26 @@ def push_team_shared_goal(body: SharedGoalPush,
             owner_id=emp.id,
             cycle_id=cycle.id,
             is_shared=True,
-            status=GoalStatusEnum.APPROVED,
-            locked_at=now
+            status=GoalStatusEnum.REVISION_REQUIRED if needs_revision else GoalStatusEnum.APPROVED,
+            locked_at=None if needs_revision else now
         )
         db.add(goal)
+        db.flush()
+        if primary_goal is None:
+            primary_goal = goal
+            primary_goal.shared_from_id = primary_goal.id
+        else:
+            goal.shared_from_id = primary_goal.id
+        if needs_revision:
+            log_change(
+                db,
+                goal.id,
+                current_user.id,
+                "status",
+                "APPROVED",
+                "REVISION_REQUIRED",
+                "Shared KPI added; employee must rebalance weightage"
+            )
 
     db.commit()
     return {"message": f"Departmental KPI pushed to {len(employees)} employee(s)"}
@@ -265,7 +320,7 @@ def approve_goals(payload: dict,
     blocking_goals = db.query(Goal).filter(
         Goal.owner_id == employee_id,
         Goal.cycle_id == cycle.id,
-        Goal.status.in_([GoalStatusEnum.RETURNED, GoalStatusEnum.DRAFT])
+        Goal.status.in_([GoalStatusEnum.RETURNED, GoalStatusEnum.DRAFT, GoalStatusEnum.REVISION_REQUIRED])
     ).all()
 
     if blocking_goals:

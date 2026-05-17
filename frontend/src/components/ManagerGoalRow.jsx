@@ -7,6 +7,7 @@ const STATUS_STYLES = {
   SUBMITTED: 'bg-yellow-100 text-yellow-700',
   APPROVED:  'bg-green-100 text-green-700',
   RETURNED:  'bg-red-100 text-red-600',
+  REVISION_REQUIRED: 'bg-orange-100 text-orange-700',
 };
 
 const UOM_LABELS = {

@@ -21,7 +21,8 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
   }
 
   const latestCheckIn = goal.checkIns[goal.checkIns.length - 1];
-  const canEditActiveQuarter = !!currentQuarter && activeQuarter === currentQuarter;
+  const isPrimarySharedOwner = !goal.isShared || !goal.sharedFromId || goal.id === goal.sharedFromId;
+  const canEditActiveQuarter = !!currentQuarter && activeQuarter === currentQuarter && isPrimarySharedOwner;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -79,6 +80,11 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
           {activeQuarter} window opens: {QUARTER_LABELS[activeQuarter]}
           {!canEditActiveQuarter && ' · read only'}
         </p>
+        {goal.isShared && !isPrimarySharedOwner && (
+          <p className="text-xs text-indigo-600 mt-1 text-center">
+            Shared KPI achievement is updated by the primary owner and syncs here automatically.
+          </p>
+        )}
       </div>
 
       {/* Check-in form for active quarter */}

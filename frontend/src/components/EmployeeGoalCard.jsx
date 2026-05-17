@@ -3,10 +3,10 @@ import ManagerGoalRow from './ManagerGoalRow';
 
 export default function EmployeeGoalCard({
   employee, goals, totalWeightage,
-  submittedCount, approvedCount,
+  submittedCount, approvedCount, revisionCount = 0,
   onApprove, onUpdated, onReturn
 }) {
-  const [expanded, setExpanded] = useState(submittedCount > 0); // auto-expand if action needed
+  const [expanded, setExpanded] = useState(submittedCount > 0 || revisionCount > 0); // auto-expand if action needed
   const allApproved   = approvedCount === goals.length && goals.length > 0;
   const canApproveAll = submittedCount > 0 && Math.round(totalWeightage) === 100;
 
@@ -41,6 +41,11 @@ export default function EmployeeGoalCard({
             {approvedCount > 0 && (
               <span className="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
                 {approvedCount} approved
+              </span>
+            )}
+            {revisionCount > 0 && (
+              <span className="px-2.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-medium">
+                {revisionCount} revision
               </span>
             )}
             {goals.length === 0 && (
@@ -85,6 +90,11 @@ export default function EmployeeGoalCard({
                   {!canApproveAll && submittedCount > 0 && (
                     <p className="text-xs text-amber-600">
                       Total weightage is {totalWeightage.toFixed(1)}% — must be 100% to approve
+                    </p>
+                  )}
+                  {revisionCount > 0 && submittedCount === 0 && (
+                    <p className="text-xs text-orange-600">
+                      Waiting for employee to rebalance and resubmit after shared KPI assignment
                     </p>
                   )}
                   {canApproveAll && (

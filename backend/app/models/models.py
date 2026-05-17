@@ -20,6 +20,7 @@ class GoalStatusEnum(str, enum.Enum):
     SUBMITTED = "SUBMITTED"
     APPROVED  = "APPROVED"
     RETURNED  = "RETURNED"
+    REVISION_REQUIRED = "REVISION_REQUIRED"
 
 class ProgressStatusEnum(str, enum.Enum):
     NOT_STARTED = "NOT_STARTED"

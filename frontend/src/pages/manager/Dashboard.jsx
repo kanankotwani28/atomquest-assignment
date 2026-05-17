@@ -280,6 +280,7 @@ export default function ManagerDashboard() {
                 totalWeightage,
                 submittedCount,
                 approvedCount,
+                revisionCount,
               }) => (
                 <EmployeeGoalCard
                   key={employee.id}
@@ -288,6 +289,7 @@ export default function ManagerDashboard() {
                   totalWeightage={totalWeightage}
                   submittedCount={submittedCount}
                   approvedCount={approvedCount}
+                  revisionCount={revisionCount}
                   onApprove={handleApprove}
                   onUpdated={fetchTeam}
                   onReturn={(goal) => setReturningGoal(goal)}
