@@ -11,15 +11,9 @@ const QUARTER_LABELS = {
   Q4: "March / April",
 };
 
-export default function GoalCheckInCard({
-  goal,
-  currentQuarter,
-  onSaved,
-  allowCheckinOutsideWindow = false,
-}) {
+export default function GoalCheckInCard({ goal, currentQuarter, onSaved, allowCheckinOutsideWindow = false }) {
   const [activeQuarter, setActiveQuarter] = useState(currentQuarter || "Q1");
 
-  // Map existing check-ins by quarter for O(1) lookup and normalize fields
   const checkInMap = {};
   const checkinsArray = goal.check_ins || goal.checkIns || [];
   for (const c of checkinsArray) {
@@ -34,95 +28,58 @@ export default function GoalCheckInCard({
     };
   }
 
-  const latestCheckIn = checkinsArray.length
-    ? checkinsArray[checkinsArray.length - 1]
-    : null;
-  const isPrimarySharedOwner =
-    !goal.isShared || !goal.sharedFromId || goal.id === goal.sharedFromId;
+  const latestCheckIn = checkinsArray.length ? checkinsArray[checkinsArray.length - 1] : null;
+  const isPrimarySharedOwner = !goal.isShared || !goal.sharedFromId || goal.id === goal.sharedFromId;
   const canEditActiveQuarter =
-    isPrimarySharedOwner &&
-    (allowCheckinOutsideWindow
-      ? true
-      : !!currentQuarter && activeQuarter === currentQuarter);
+    isPrimarySharedOwner && (allowCheckinOutsideWindow ? true : !!currentQuarter && activeQuarter === currentQuarter);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      {/* Goal header */}
-      <div className="p-5 border-b border-gray-100">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold text-gray-900 text-sm">
-              {goal.title}
-            </h3>
-            <p className="text-xs text-indigo-600 mt-0.5">
-              {goal.thrustArea?.name}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-gray-400">{goal.weightage}%</span>
-            {latestCheckIn && <ScoreBadge score={latestCheckIn.score} />}
-          </div>
+    <div className="aq-card p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[15px] font-medium tracking-[0.01em] text-[#f0f0f0]">{goal.title}</h3>
+          <p className="label-caps mt-2">{goal.thrustArea?.name}</p>
         </div>
-
-        {/* Mini progress timeline */}
-        <div className="flex items-center gap-1.5 mt-4">
-          {QUARTERS.map((q) => {
-            const ci = checkInMap[q];
-            const isActive = q === activeQuarter;
-            const isCurrent = q === currentQuarter;
-            const hasCi = !!ci;
-
-            return (
-              <button
-                key={q}
-                onClick={() => setActiveQuarter(q)}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : hasCi
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : isCurrent
-                        ? "bg-amber-50 text-amber-700 border border-amber-200"
-                        : "bg-gray-50 text-gray-400 border border-gray-200"
-                }`}
-              >
-                {q}
-                {hasCi && !isActive && (
-                  <span className="block text-xs opacity-70">
-                    {ci.score !== null ? `${ci.score?.toFixed(0)}%` : "✓"}
-                  </span>
-                )}
-                {!hasCi && isCurrent && !isActive && (
-                  <span className="block text-xs opacity-70">open</span>
-                )}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <span className="metric-badge mono px-2.5 py-1 text-xs">{goal.weightage}%</span>
+          {latestCheckIn && <ScoreBadge score={latestCheckIn.score} />}
         </div>
+      </div>
 
-        {/* Quarter label */}
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          {activeQuarter} window opens: {QUARTER_LABELS[activeQuarter]}
-          {!canEditActiveQuarter && " · read only"}
+      <div className="tabs mb-4">
+        {QUARTERS.map((q) => {
+          const ci = checkInMap[q];
+          const isActive = q === activeQuarter;
+          return (
+            <button
+              key={q}
+              onClick={() => setActiveQuarter(q)}
+              className={`tab ${isActive ? "active" : ""}`}
+            >
+              {q}
+              {ci && !isActive && <span className="mono ml-2 text-[11px] text-[#555]">{ci.score?.toFixed(0)}%</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mb-4 text-center text-xs text-[#555]">
+        {activeQuarter} window opens: {QUARTER_LABELS[activeQuarter]}
+        {!canEditActiveQuarter && " · read only"}
+      </p>
+      {goal.isShared && !isPrimarySharedOwner && (
+        <p className="mb-4 text-center text-xs text-[#888]">
+          Shared KPI achievement is updated by the primary owner and syncs here automatically.
         </p>
-        {goal.isShared && !isPrimarySharedOwner && (
-          <p className="text-xs text-indigo-600 mt-1 text-center">
-            Shared KPI achievement is updated by the primary owner and syncs
-            here automatically.
-          </p>
-        )}
-      </div>
+      )}
 
-      {/* Check-in form for active quarter */}
-      <div className="p-5">
-        <CheckInForm
-          goal={goal}
-          quarter={activeQuarter}
-          existingCheckIn={checkInMap[activeQuarter]}
-          onSaved={onSaved}
-          canEdit={canEditActiveQuarter}
-        />
-      </div>
+      <CheckInForm
+        goal={goal}
+        quarter={activeQuarter}
+        existingCheckIn={checkInMap[activeQuarter]}
+        onSaved={onSaved}
+        canEdit={canEditActiveQuarter}
+      />
     </div>
   );
 }

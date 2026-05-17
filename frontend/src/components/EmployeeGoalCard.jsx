@@ -1,123 +1,103 @@
-import { useState } from 'react';
-import ManagerGoalRow from './ManagerGoalRow';
+import { useState } from "react";
+import ManagerGoalRow from "./ManagerGoalRow";
+
+function initials(name = "") {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "E";
+}
 
 export default function EmployeeGoalCard({
-  employee, goals, totalWeightage,
-  submittedCount, approvedCount, revisionCount = 0,
-  onApprove, onUpdated, onReturn
+  employee,
+  goals,
+  totalWeightage,
+  submittedCount,
+  approvedCount,
+  revisionCount = 0,
+  onApprove,
+  onUpdated,
+  onReturn,
 }) {
-  const [expanded, setExpanded] = useState(submittedCount > 0 || revisionCount > 0); // auto-expand if action needed
-  const allApproved   = approvedCount === goals.length && goals.length > 0;
+  const [expanded, setExpanded] = useState(submittedCount > 0 || revisionCount > 0);
+  const allApproved = approvedCount === goals.length && goals.length > 0;
   const canApproveAll = submittedCount > 0 && Math.round(totalWeightage) === 100;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      {/* Employee header */}
-      <div
-        className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors"
+    <div className="aq-card overflow-hidden">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-[#161616]"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-3">
-          {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center">
-            <span className="text-sm font-semibold text-indigo-600">
-              {employee.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
+          <div className="avatar">{initials(employee.name)}</div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">{employee.name}</p>
-            <p className="text-xs text-gray-400">{employee.department}</p>
+            <p className="text-sm font-medium text-[#f0f0f0]">{employee.name}</p>
+            <p className="text-xs text-[#555]">{employee.department}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Goal count badges */}
-          <div className="flex gap-2 text-xs">
-            {submittedCount > 0 && (
-              <span className="px-2.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">
-                {submittedCount} pending
-              </span>
-            )}
-            {approvedCount > 0 && (
-              <span className="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
-                {approvedCount} approved
-              </span>
-            )}
-            {revisionCount > 0 && (
-              <span className="px-2.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-medium">
-                {revisionCount} revision
-              </span>
-            )}
-            {goals.length === 0 && (
-              <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full">
-                No goals
-              </span>
-            )}
+          <div className="hidden gap-2 text-xs sm:flex">
+            {submittedCount > 0 && <span className="status-badge status-submitted">{submittedCount} pending</span>}
+            {approvedCount > 0 && <span className="status-badge status-approved">{approvedCount} approved</span>}
+            {revisionCount > 0 && <span className="status-badge status-revision-required">{revisionCount} revision</span>}
+            {goals.length === 0 && <span className="status-badge status-draft">No goals</span>}
           </div>
-
-          {/* Weightage total */}
-          <span className={`text-xs font-medium ${
-            Math.round(totalWeightage) === 100 ? 'text-green-600' : 'text-gray-400'
-          }`}>
+          <span className={`mono text-xs ${Math.round(totalWeightage) === 100 ? "text-[#7ab88a]" : "text-[#888]"}`}>
             {totalWeightage.toFixed(0)}%
           </span>
-
-          <span className="text-gray-300 text-sm">{expanded ? '▲' : '▼'}</span>
+          <span className="text-xs text-[#555]">{expanded ? "Collapse" : "Expand"}</span>
         </div>
-      </div>
+      </button>
 
-      {/* Expanded goal list */}
       {expanded && (
-        <div className="border-t border-gray-100 p-5 space-y-3">
+        <div className="border-t border-[#2a2a2a] p-5">
           {goals.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">
-              No goals submitted yet for this cycle
-            </p>
+            <p className="py-4 text-center text-sm text-[#555]">No goals submitted yet for this cycle</p>
           ) : (
             <>
-              {goals.map(goal => (
-                <ManagerGoalRow
-                  key={goal.id}
-                  goal={goal}
-                  onUpdated={onUpdated}
-                  onReturn={onReturn}
-                />
-              ))}
+              <div className="overflow-x-auto">
+                <table className="aq-table">
+                  <thead>
+                    <tr>
+                      <th>Goal Title</th>
+                      <th>Thrust Area</th>
+                      <th>UoM</th>
+                      <th>Target</th>
+                      <th>Weightage</th>
+                      <th>Status</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {goals.map((goal) => (
+                      <ManagerGoalRow key={goal.id} goal={goal} onUpdated={onUpdated} onReturn={onReturn} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-              {/* Approval action */}
               {!allApproved && (
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                <div className="mt-4 flex items-center justify-between border-t border-[#2a2a2a] pt-4">
                   {!canApproveAll && submittedCount > 0 && (
-                    <p className="text-xs text-amber-600">
-                      Total weightage is {totalWeightage.toFixed(1)}% — must be 100% to approve
+                    <p className="text-xs text-[#c09a4a]">
+                      Total weightage is {totalWeightage.toFixed(1)}%; must be 100% to approve.
                     </p>
                   )}
                   {revisionCount > 0 && submittedCount === 0 && (
-                    <p className="text-xs text-orange-600">
-                      Waiting for employee to rebalance and resubmit after shared KPI assignment
+                    <p className="text-xs text-[#c09a4a]">
+                      Waiting for employee to rebalance and resubmit after shared KPI assignment.
                     </p>
                   )}
-                  {canApproveAll && (
-                    <p className="text-xs text-green-600">
-                      ✓ All goals valid — ready to approve
-                    </p>
-                  )}
-                  <button
-                    onClick={() => onApprove(employee.id)}
-                    disabled={!canApproveAll}
-                    className="ml-auto text-sm px-4 py-2 bg-green-600 text-white rounded-lg
-                               font-medium hover:bg-green-700 disabled:opacity-40
-                               disabled:cursor-not-allowed transition-colors">
-                    Approve all goals
+                  {canApproveAll && <p className="text-xs text-[#7ab88a]">All goals valid and ready to approve.</p>}
+                  <button onClick={() => onApprove(employee.id)} disabled={!canApproveAll} className="btn btn-success ml-auto">
+                    Approve All
                   </button>
                 </div>
               )}
 
               {allApproved && (
-                <div className="pt-3 border-t border-gray-100">
-                  <p className="text-xs text-green-600 font-medium">
-                    ✓ All goals approved and locked
-                  </p>
+                <div className="mt-4 border-t border-[#2a2a2a] pt-4">
+                  <p className="text-xs text-[#7ab88a]">All goals approved and locked.</p>
                 </div>
               )}
             </>

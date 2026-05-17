@@ -4,9 +4,9 @@ import ScoreBadge from "./ScoreBadge";
 import toast from "react-hot-toast";
 
 const PROGRESS_OPTIONS = [
-  { value: "NOT_STARTED", label: "Not started", color: "text-gray-500" },
-  { value: "ON_TRACK", label: "On track", color: "text-blue-600" },
-  { value: "COMPLETED", label: "Completed", color: "text-green-600" },
+  { value: "NOT_STARTED", label: "Not started" },
+  { value: "ON_TRACK", label: "On track" },
+  { value: "COMPLETED", label: "Completed" },
 ];
 
 const UOM_LABELS = {
@@ -16,39 +16,21 @@ const UOM_LABELS = {
   ZERO: "Zero = Success",
 };
 
-export default function CheckInForm({
-  goal,
-  quarter,
-  existingCheckIn,
-  onSaved,
-  canEdit = true,
-}) {
-  const [actual, setActual] = useState(
-    existingCheckIn?.actual ?? existingCheckIn?.actual ?? "",
-  );
+export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, canEdit = true }) {
+  const [actual, setActual] = useState(existingCheckIn?.actual ?? existingCheckIn?.actual ?? "");
   const [completionDate, setCompletionDate] = useState(
     existingCheckIn?.completionDate || existingCheckIn?.completion_date
-      ? new Date(
-          existingCheckIn?.completionDate || existingCheckIn?.completion_date,
-        )
-          .toISOString()
-          .split("T")[0]
+      ? new Date(existingCheckIn?.completionDate || existingCheckIn?.completion_date).toISOString().split("T")[0]
       : "",
   );
   const [progressStatus, setProgressStatus] = useState(
-    existingCheckIn?.progressStatus ||
-      existingCheckIn?.progress_status ||
-      "NOT_STARTED",
+    existingCheckIn?.progressStatus || existingCheckIn?.progress_status || "NOT_STARTED",
   );
   const [saving, setSaving] = useState(false);
 
-  // Live score preview — recalculates client-side as user types
-  // so they see immediate feedback before saving
   const uom = goal.uomType || goal.uom_type;
   const previewScore = () => {
-    if (uom === "ZERO") {
-      return actual === "" ? null : parseFloat(actual) === 0 ? 100 : 0;
-    }
+    if (uom === "ZERO") return actual === "" ? null : parseFloat(actual) === 0 ? 100 : 0;
     if (uom === "NUMERIC_MIN") {
       if (!actual || !goal.target) return null;
       return parseFloat(((parseFloat(actual) / goal.target) * 100).toFixed(2));
@@ -74,33 +56,18 @@ export default function CheckInForm({
     const payload = {
       goal_id: goal.id,
       quarter,
-      actual:
-        uom !== "TIMELINE"
-          ? actual === ""
-            ? undefined
-            : parseFloat(actual)
-          : undefined,
-      completion_date:
-        uom === "TIMELINE" && completionDate
-          ? new Date(completionDate).toISOString()
-          : undefined,
+      actual: uom !== "TIMELINE" ? (actual === "" ? undefined : parseFloat(actual)) : undefined,
+      completion_date: uom === "TIMELINE" && completionDate ? new Date(completionDate).toISOString() : undefined,
       progress_status: progressStatus,
     };
 
-    console.log("Employee check-in save payload:", payload);
-
     setSaving(true);
     try {
-      const res = await upsertCheckIn(payload);
-      console.log("Employee check-in save response:", res.data);
+      await upsertCheckIn(payload);
       toast.success(`${quarter} check-in saved`);
       onSaved();
     } catch (err) {
-      toast.error(
-        err.response?.data?.detail ||
-          err.response?.data?.error ||
-          "Failed to save",
-      );
+      toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -108,32 +75,21 @@ export default function CheckInForm({
 
   const liveScore = previewScore();
   const isTimeline = goal.uomType === "TIMELINE";
+  const scorePct = liveScore ?? existingCheckIn?.score ?? 0;
+  const fillClass = scorePct >= 80 ? "fill-success" : scorePct >= 50 ? "fill-warning" : "fill-danger";
 
   return (
-    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-4">
-      {/* Goal context */}
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            {quarter} Check-in
-          </p>
-          <p className="text-sm font-semibold text-gray-900 mt-0.5">
-            {goal.title}
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {UOM_LABELS[goal.uomType]} · Target:{" "}
-            {goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}
-          </p>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="progress-track flex-1">
+          <div className={`progress-fill ${fillClass}`} style={{ width: `${Math.min(scorePct, 100)}%` }} />
         </div>
-        {existingCheckIn?.score !== undefined && (
-          <ScoreBadge score={existingCheckIn.score} />
-        )}
+        <span className="mono w-16 text-right text-xs text-[#f0f0f0]">{scorePct.toFixed(1)}%</span>
       </div>
 
-      {/* Actual / date input */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="mb-1 block text-xs font-medium text-[#888]">
             {isTimeline ? "Completion date" : "Actual achievement"}
           </label>
           {isTimeline ? (
@@ -142,9 +98,7 @@ export default function CheckInForm({
               value={completionDate}
               onChange={(e) => setCompletionDate(e.target.value)}
               disabled={!canEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-400
-                         disabled:bg-gray-100 disabled:text-gray-400"
+              className="w-full px-3 py-2 text-sm disabled:text-[#555]"
             />
           ) : (
             <input
@@ -154,78 +108,49 @@ export default function CheckInForm({
               onChange={(e) => setActual(e.target.value)}
               disabled={!canEdit}
               placeholder={goal.uomType === "ZERO" ? "0" : "Enter actual value"}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-400
-                         disabled:bg-gray-100 disabled:text-gray-400"
+              className="w-full px-3 py-2 text-sm disabled:text-[#555]"
             />
           )}
+          <p className="mt-1 text-xs text-[#555]">
+            {UOM_LABELS[goal.uomType]} · Target: {goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}
+          </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Progress status
-          </label>
+          <label className="mb-1 block text-xs font-medium text-[#888]">Progress status</label>
           <select
             value={progressStatus}
             onChange={(e) => setProgressStatus(e.target.value)}
             disabled={!canEdit}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                       bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400
-                       disabled:bg-gray-100 disabled:text-gray-400"
+            className="w-full px-3 py-2 text-sm disabled:text-[#555]"
           >
             {PROGRESS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Live score preview */}
       {liveScore !== null && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200">
-          <span className="text-xs text-gray-500">Live score preview:</span>
+        <div className="flex items-center gap-2 rounded-lg border border-[#2a2a2a] bg-[#0f0f0f] px-3 py-2">
+          <span className="text-xs text-[#888]">Live score preview</span>
           <ScoreBadge score={liveScore} />
-          <span className="text-xs text-gray-400 ml-auto">
-            {goal.uomType === "NUMERIC_MIN" &&
-              `${actual} ÷ ${goal.target} × 100`}
-            {goal.uomType === "NUMERIC_MAX" &&
-              `${goal.target} ÷ ${actual} × 100`}
-            {goal.uomType === "ZERO" &&
-              (parseFloat(actual) === 0 ? "Zero achieved ✓" : "Non-zero value")}
-            {goal.uomType === "TIMELINE" &&
-              (liveScore === 100 ? "On or before deadline ✓" : "Past deadline")}
-          </span>
         </div>
       )}
 
-      {/* Manager comment (read-only for employee) */}
       {existingCheckIn?.managerComment && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          <p className="text-xs font-medium text-amber-700 mb-1">
-            Manager comment
-          </p>
-          <p className="text-xs text-amber-800">
-            {existingCheckIn.managerComment}
-          </p>
-        </div>
+        <blockquote className="border-l-[3px] border-[#333] bg-[#0f0f0f] px-3 py-2 text-xs text-[#888]">
+          <p className="mb-1 text-[#f0f0f0]">Manager comment</p>
+          {existingCheckIn.managerComment}
+        </blockquote>
       )}
 
       <button
         onClick={handleSave}
         disabled={!canEdit || saving || (!actual && !completionDate)}
-        className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium
-                   hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed
-                   transition-colors"
+        className="btn btn-success w-full"
       >
-        {!canEdit
-          ? "Check-in window closed"
-          : saving
-            ? "Saving..."
-            : existingCheckIn
-              ? "Update check-in"
-              : "Save check-in"}
+        {!canEdit ? "Check-in window closed" : saving ? "Saving..." : existingCheckIn ? "Update check-in" : "Save check-in"}
       </button>
     </div>
   );

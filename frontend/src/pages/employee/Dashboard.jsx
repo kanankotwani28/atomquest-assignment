@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   getMyGoals,
@@ -10,6 +9,7 @@ import {
   deleteGoal,
   submitAllGoals,
 } from "../../api/goals";
+import AppShell from "../../components/AppShell";
 import GoalCard from "../../components/GoalCard";
 import GoalFormModal from "../../components/GoalFormModal";
 import WeightageBar from "../../components/WeightageBar";
@@ -27,8 +27,6 @@ export default function EmployeeDashboard() {
   const fetchGoals = async () => {
     try {
       const res = await getMyGoals();
-      console.log("Goals API response:", res.data);
-      // API returns List[GoalOut] directly, not wrapped in a goals/cycle object
       setGoals(Array.isArray(res.data) ? res.data : []);
     } catch {
       toast.error("Failed to load goals");
@@ -40,50 +38,38 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     fetchGoals();
     Promise.all([
-      getThrustAreas()
-        .then((r) => setThrustAreas(r.data))
-        .catch(() => {}),
-      getActiveCycle()
-        .then((r) => setCycle(r.data))
-        .catch(() => {}),
+      getThrustAreas().then((r) => setThrustAreas(r.data)).catch(() => {}),
+      getActiveCycle().then((r) => setCycle(r.data)).catch(() => {}),
     ]);
   }, []);
 
   const totalWeightage = goals.reduce((s, g) => s + g.weightage, 0);
   const remainingWeightage = Math.max(0, 100 - totalWeightage);
+  const approvedCount = goals.filter((g) => g.status === "APPROVED").length;
+  const submittedCount = goals.filter((g) => g.status === "SUBMITTED").length;
+  const openCount = goals.length - approvedCount - submittedCount;
 
-  const hasEditableGoals = goals.some((g) =>
-    ["DRAFT", "RETURNED", "REVISION_REQUIRED"].includes(g.status),
-  );
-  const allApproved =
-    goals.length > 0 && goals.every((g) => g.status === "APPROVED");
+  const hasEditableGoals = goals.some((g) => ["DRAFT", "RETURNED", "REVISION_REQUIRED"].includes(g.status));
+  const allApproved = goals.length > 0 && goals.every((g) => g.status === "APPROVED");
   const canSubmit =
     goals.some((g) => ["DRAFT", "RETURNED", "REVISION_REQUIRED"].includes(g.status)) &&
     Math.round(totalWeightage) === 100;
 
   const handleSave = async (data) => {
     try {
-      console.log("Saving goal with data:", data);
       if (editingGoal) {
-        const res = await updateGoal(editingGoal.id, data);
-        console.log("Update response:", res);
+        await updateGoal(editingGoal.id, data);
         toast.success("Goal updated");
       } else {
-        const res = await createGoal(data);
-        console.log("Create response:", res);
+        await createGoal(data);
         toast.success("Goal added");
       }
       setEditingGoal(null);
       await fetchGoals();
     } catch (err) {
-      console.error("Error saving goal:", err);
-      console.error("Error response:", err.response?.data);
-      const errorMsg =
-        err.response?.data?.detail ||
-        err.response?.data?.error ||
-        "Failed to save goal";
+      const errorMsg = err.response?.data?.detail || err.response?.data?.error || "Failed to save goal";
       toast.error(errorMsg);
-      throw err; // keeps modal open on error
+      throw err;
     }
   };
 
@@ -99,12 +85,7 @@ export default function EmployeeDashboard() {
   };
 
   const handleSubmitAll = async () => {
-    if (
-      !confirm(
-        "Submit all draft goals for manager approval? You cannot edit them after submission.",
-      )
-    )
-      return;
+    if (!confirm("Submit all draft goals for manager approval? You cannot edit them after submission.")) return;
     try {
       const res = await submitAllGoals();
       toast.success(res.data.message);
@@ -114,71 +95,65 @@ export default function EmployeeDashboard() {
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">Loading your goals...</p>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="skeleton h-4 w-44 rounded" />
       </div>
     );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
+    <AppShell
+      user={user}
+      logout={logout}
+      title="My Goals"
+      subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active cycle"}
+    >
+      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
-      {/* Topbar */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">My Goals</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {cycle ? `${cycle.year} · ${cycle.phase}` : "Active cycle"}
-            </p>
+      <div className="space-y-6">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="aq-card stat-card">
+            <p className="label-caps">Goals Created</p>
+            <p className="stat-value mt-3">{goals.length}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">{user.name}</span>
-            <Link
-              to="/employee/checkins"
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-            >
-              Check-ins →
-            </Link>
-            <button
-              onClick={logout}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Sign out
-            </button>
+          <div className="aq-card stat-card flex items-center justify-between">
+            <div>
+              <p className="label-caps">Total Weightage</p>
+              <p className="mono mt-3 text-xl text-[#f0f0f0]">{totalWeightage.toFixed(1)}%</p>
+            </div>
+            <WeightRing value={totalWeightage} />
           </div>
-        </div>
-      </header>
+          <div className="aq-card stat-card">
+            <p className="label-caps">Goals Status</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="status-badge status-submitted">{submittedCount} submitted</span>
+              <span className="status-badge status-approved">{approvedCount} approved</span>
+              <span className="status-badge status-draft">{openCount} open</span>
+            </div>
+          </div>
+        </section>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Weightage tracker */}
         <WeightageBar goals={goals} />
 
-        {/* Status banner */}
         {allApproved && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-4">
-            <p className="text-green-700 text-sm font-medium">
-              ✓ All goals approved by your manager
-            </p>
+          <div className="aq-card border-[#4a7c59] px-5 py-4">
+            <p className="text-sm text-[#7ab88a]">All goals approved by your manager</p>
           </div>
         )}
 
         {goals.some((g) => g.status === "REVISION_REQUIRED") && (
-          <div className="bg-orange-50 border border-orange-200 rounded-xl px-5 py-4">
-            <p className="text-orange-700 text-sm font-medium">
-              Revision required after shared KPI assignment
-            </p>
-            <p className="text-orange-600 text-xs mt-1">
+          <div className="aq-card border-[#8a6a2a] px-5 py-4">
+            <p className="text-sm text-[#c09a4a]">Revision required after shared KPI assignment</p>
+            <p className="mt-1 text-xs text-[#888]">
               Rebalance weightages so the sheet totals 100%, then submit for manager re-approval.
             </p>
           </div>
         )}
 
-        {/* Action bar */}
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-gray-700">
+          <h2 className="label">
             {goals.length} goal{goals.length !== 1 ? "s" : ""} · {cycle?.year}
           </h2>
           <div className="flex gap-3">
@@ -188,44 +163,36 @@ export default function EmployeeDashboard() {
                   setEditingGoal(null);
                   setModalOpen(true);
                 }}
-                className="text-sm px-4 py-2 bg-indigo-600 text-white rounded-lg
-                           hover:bg-indigo-700 transition-colors font-medium"
+                className="btn"
               >
-                + Add goal
+                Add Goal
               </button>
             )}
             {canSubmit && (
-              <button
-                onClick={handleSubmitAll}
-                className="text-sm px-4 py-2 bg-green-600 text-white rounded-lg
-                           hover:bg-green-700 transition-colors font-medium"
-              >
-                Submit for approval
+              <button onClick={handleSubmitAll} className="btn btn-success">
+                Submit for Approval
               </button>
             )}
           </div>
         </div>
 
-        {/* Goals grid */}
         {goals.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-4">🎯</div>
-            <h3 className="font-medium text-gray-900 mb-2">No goals yet</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Start by adding your first goal for this cycle.
-            </p>
+          <div className="aq-card py-20 text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#2a2a2a]" />
+            <h3 className="mb-2 font-medium text-[#888]">No goals yet</h3>
+            <p className="mb-6 text-sm text-[#555]">Start by adding your first goal for this cycle.</p>
             <button
               onClick={() => {
                 setEditingGoal(null);
                 setModalOpen(true);
               }}
-              className="text-sm px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="btn"
             >
-              Add first goal
+              Add First Goal
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {goals.map((goal) => (
               <GoalCard
                 key={goal.id}
@@ -240,16 +207,12 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        {/* Submission hint */}
-        {hasEditableGoals &&
-          Math.round(totalWeightage) !== 100 &&
-          goals.length > 0 && (
-            <p className="text-center text-xs text-gray-400">
-              Total weightage must equal 100% before you can submit. Currently
-              at {totalWeightage.toFixed(1)}%.
-            </p>
-          )}
-      </main>
+        {hasEditableGoals && Math.round(totalWeightage) !== 100 && goals.length > 0 && (
+          <p className="text-center text-xs text-[#555]">
+            Total weightage must equal 100% before you can submit. Currently at {totalWeightage.toFixed(1)}%.
+          </p>
+        )}
+      </div>
 
       <GoalFormModal
         isOpen={modalOpen}
@@ -260,12 +223,35 @@ export default function EmployeeDashboard() {
         onSave={handleSave}
         thrustAreas={thrustAreas}
         existingGoal={editingGoal}
-        remainingWeightage={
-          editingGoal
-            ? remainingWeightage + editingGoal.weightage // add back current goal's weight when editing
-            : remainingWeightage
-        }
+        remainingWeightage={editingGoal ? remainingWeightage + editingGoal.weightage : remainingWeightage}
       />
+    </AppShell>
+  );
+}
+
+function WeightRing({ value }) {
+  const pct = Math.min(Math.max(value, 0), 100);
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+
+  return (
+    <div className="relative h-20 w-20">
+      <svg viewBox="0 0 72 72" className="h-20 w-20 -rotate-90">
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="#2a2a2a" strokeWidth="6" />
+        <circle
+          cx="36"
+          cy="36"
+          r={radius}
+          fill="none"
+          stroke="#e8e8e8"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <div className="mono absolute inset-0 grid place-items-center text-xs text-[#f0f0f0]">{pct.toFixed(0)}%</div>
     </div>
   );
 }

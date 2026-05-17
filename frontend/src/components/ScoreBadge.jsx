@@ -3,7 +3,7 @@
 export default function ScoreBadge({ score }) {
   if (score === null || score === undefined) {
     return (
-      <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-400 font-medium">
+      <span className="status-badge status-draft mono">
         No data
       </span>
     );
@@ -12,13 +12,12 @@ export default function ScoreBadge({ score }) {
   const pct = parseFloat(score).toFixed(1);
 
   const style =
-    score >= 100 ? 'bg-green-100 text-green-700' :
-    score >= 75  ? 'bg-blue-100 text-blue-700'   :
-    score >= 50  ? 'bg-yellow-100 text-yellow-700':
-                   'bg-red-100 text-red-600';
+    score >= 80 ? 'status-approved' :
+    score >= 50 ? 'status-submitted':
+                  'status-returned';
 
   return (
-    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${style}`}>
+    <span className={`status-badge mono ${style}`}>
       {pct}%
     </span>
   );

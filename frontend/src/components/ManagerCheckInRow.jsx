@@ -1,18 +1,11 @@
 import { useState } from "react";
 import { addManagerComment } from "../api/checkins";
-import ScoreBadge from "./ScoreBadge";
 import toast from "react-hot-toast";
 
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
 
-const STATUS_ICONS = {
-  NOT_STARTED: "○",
-  ON_TRACK: "◑",
-  COMPLETED: "●",
-};
-
 export default function ManagerCheckInRow({ goal, onUpdated }) {
-  const [commentingOn, setCommentingOn] = useState(null); // checkIn id
+  const [commentingOn, setCommentingOn] = useState(null);
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -47,69 +40,53 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      {/* Goal title */}
-      <div className="flex items-start justify-between mb-4">
+    <div className="aq-card p-4">
+      <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{goal.title}</p>
-          <p className="text-xs text-indigo-600 mt-0.5">
-            {goal.thrustArea?.name} · {goal.weightage}% · Target:{" "}
-            {goal.target.toLocaleString()}
+          <p className="text-sm font-medium text-[#f0f0f0]">{goal.title}</p>
+          <p className="mt-1 text-xs text-[#888]">
+            {goal.thrustArea?.name} · <span className="mono">{goal.weightage}%</span> · Target:{" "}
+            <span className="mono">{goal.target.toLocaleString()}</span>
           </p>
         </div>
       </div>
 
-      {/* Quarter-by-quarter breakdown */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-4">
         {QUARTERS.map((q) => {
           const ci = checkInMap[q];
+          const dot = ci?.score >= 80 ? "#4a7c59" : ci?.score >= 50 ? "#8a6a2a" : "#7c3a3a";
           return (
-            <div
-              key={q}
-              className={`rounded-lg p-3 border text-center ${
-                ci
-                  ? "bg-gray-50 border-gray-200"
-                  : "bg-white border-dashed border-gray-200"
-              }`}
-            >
-              <p className="text-xs font-medium text-gray-500 mb-2">{q}</p>
-
+            <div key={q} className="rounded-lg border border-[#2a2a2a] bg-[#0f0f0f] p-3">
+              <p className="mb-2 text-xs font-medium text-[#888]">{q}</p>
               {ci ? (
                 <>
-                  {/* Planned vs Actual */}
-                  <div className="space-y-1 mb-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-400">Plan</span>
-                      <span className="text-gray-700 font-medium">
-                        {goal.target.toLocaleString()}
-                      </span>
+                  <div className="mb-2 space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[#555]">Planned</span>
+                      <span className="mono text-[#888]">{goal.target.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-400">Actual</span>
-                      <span className="text-gray-900 font-semibold">
+                    <div className="flex justify-between">
+                      <span className="text-[#555]">Actual</span>
+                      <span className="mono text-[#f0f0f0]">
                         {goal.uomType === "TIMELINE"
                           ? ci.completionDate
                             ? new Date(ci.completionDate).toLocaleDateString()
-                            : "—"
+                            : "-"
                           : ci.actual !== null
                             ? ci.actual?.toLocaleString()
-                            : "—"}
+                            : "-"}
                       </span>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ background: dot }} />
+                    <span className="mono text-xs text-[#f0f0f0]">{Number(ci.score || 0).toFixed(1)}%</span>
+                  </div>
+                  <p className="mt-1 text-xs text-[#555]">{ci.progressStatus.replace("_", " ")}</p>
 
-                  <ScoreBadge score={ci.score} />
-
-                  {/* Status icon */}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {STATUS_ICONS[ci.progressStatus]}{" "}
-                    {ci.progressStatus.replace("_", " ")}
-                  </p>
-
-                  {/* Comment button / display */}
                   {ci.managerComment ? (
                     <div className="mt-2 text-left">
-                      <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 leading-relaxed">
+                      <p className="border-l-[3px] border-[#333] bg-[#111] px-2 py-1 text-xs leading-relaxed text-[#888]">
                         {ci.managerComment}
                       </p>
                       <button
@@ -117,7 +94,7 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
                           setCommentingOn(ci.id);
                           setComment(ci.managerComment);
                         }}
-                        className="text-xs text-gray-400 hover:text-gray-600 mt-1"
+                        className="mt-1 text-xs text-[#888] hover:text-[#f0f0f0]"
                       >
                         Edit comment
                       </button>
@@ -128,41 +105,32 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
                         setCommentingOn(ci.id);
                         setComment("");
                       }}
-                      className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 transition-colors"
+                      className="mt-2 text-xs text-[#888] hover:text-[#f0f0f0]"
                     >
-                      + Add comment
+                      Add comment
                     </button>
                   )}
                 </>
               ) : (
-                <p className="text-xs text-gray-300 mt-4">No data</p>
+                <p className="mt-4 text-xs text-[#555]">No data</p>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Comment input inline */}
       {commentingOn && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Check-in comment
-          </label>
+        <div className="mt-4 border-t border-[#2a2a2a] pt-4">
+          <label className="mb-1 block text-xs font-medium text-[#888]">Check-in comment</label>
           <textarea
             rows={3}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Document your discussion — progress, blockers, guidance..."
-            className="w-full px-3 py-2 border border-indigo-300 rounded-lg text-sm
-                       focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            placeholder="Document your discussion..."
+            className="w-full resize-none px-3 py-2 text-sm"
           />
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={saveComment}
-              disabled={saving || !comment.trim()}
-              className="text-xs px-4 py-2 bg-indigo-600 text-white rounded-lg
-                         hover:bg-indigo-700 disabled:opacity-40 transition-colors"
-            >
+          <div className="mt-2 flex gap-2">
+            <button onClick={saveComment} disabled={saving || !comment.trim()} className="btn btn-success">
               {saving ? "Saving..." : "Save comment"}
             </button>
             <button
@@ -170,8 +138,7 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
                 setCommentingOn(null);
                 setComment("");
               }}
-              className="text-xs px-4 py-2 border border-gray-200 rounded-lg
-                         text-gray-500 hover:bg-gray-50 transition-colors"
+              className="btn"
             >
               Cancel
             </button>

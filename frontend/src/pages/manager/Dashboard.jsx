@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
-import {
-  getTeamGoals,
-  approveGoals,
-  returnGoal,
-  pushTeamSharedGoal,
-} from "../../api/manager";
+import { getTeamGoals, approveGoals, returnGoal, pushTeamSharedGoal } from "../../api/manager";
+import AppShell from "../../components/AppShell";
 import EmployeeGoalCard from "../../components/EmployeeGoalCard";
 import ReturnReasonModal from "../../components/ReturnReasonModal";
 import toast, { Toaster } from "react-hot-toast";
@@ -35,7 +30,7 @@ export default function ManagerDashboard() {
   const [thrustAreas, setThrustAreas] = useState([]);
   const [sharedGoal, setSharedGoal] = useState(initialSharedGoal);
   const [loading, setLoading] = useState(true);
-  const [returningGoal, setReturningGoal] = useState(null); // goal being returned
+  const [returningGoal, setReturningGoal] = useState(null);
 
   const fetchTeam = async () => {
     try {
@@ -51,19 +46,12 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     fetchTeam();
-    getThrustAreas()
-      .then((res) => setThrustAreas(res.data))
-      .catch(() => {});
+    getThrustAreas().then((res) => setThrustAreas(res.data)).catch(() => {});
   }, []);
 
   const handleApprove = async (employeeId) => {
     const emp = team.find((t) => t.employee.id === employeeId);
-    if (
-      !confirm(
-        `Approve all submitted goals for ${emp?.employee.name}? They will be locked.`,
-      )
-    )
-      return;
+    if (!confirm(`Approve all submitted goals for ${emp?.employee.name}? They will be locked.`)) return;
     try {
       const res = await approveGoals(employeeId);
       toast.success(res.data.message);
@@ -106,9 +94,7 @@ export default function ManagerDashboard() {
     } catch (err) {
       const detail = err.response?.data?.detail;
       if (detail && detail.blocked) {
-        const list = detail.blocked
-          .map((b) => `${b.name} (${b.approved_total}% → ${b.would_be}%)`)
-          .join(", ");
+        const list = detail.blocked.map((b) => `${b.name} (${b.approved_total}% -> ${b.would_be}%)`).join(", ");
         toast.error(`${detail.message}: ${list}`);
       } else {
         toast.error(detail?.message || detail || "Failed to push KPI");
@@ -116,224 +102,111 @@ export default function ManagerDashboard() {
     }
   };
 
-  // Summary counts for header stats
   const totalPending = team.reduce((s, t) => s + t.submittedCount, 0);
   const totalApproved = team.reduce((s, t) => s + t.approvedCount, 0);
   const totalGoals = team.reduce((s, t) => s + t.goals.length, 0);
+  const teamScore = totalGoals ? ((totalApproved / totalGoals) * 100).toFixed(1) : "0.0";
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">Loading team goals...</p>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="skeleton h-4 w-44 rounded" />
       </div>
     );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
+    <AppShell
+      user={user}
+      logout={logout}
+      title="Team Overview"
+      subtitle={cycle ? `${cycle.year} · ${cycle.phase} · ${team.length} direct reports` : "Active cycle"}
+    >
+      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
-      {/* Topbar */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Team Goals</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {cycle ? `${cycle.year} · ${cycle.phase}` : "Active cycle"} ·{" "}
-              {team.length} direct reports
-            </p>
+      <div className="space-y-6">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <Stat label="Total Reports" value={team.length} />
+          <Stat label="Pending Approvals" value={totalPending} tone="warning" />
+          <Stat label="Approved" value={totalApproved} tone="success" />
+          <div className="aq-card stat-card">
+            <p className="label-caps">Overall Team Score</p>
+            <p className="mono mt-3 text-[32px] font-medium text-[#f0f0f0]">{teamScore}%</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">{user.name}</span>
-            <Link
-              to="/manager/checkins"
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-            >
-              Check-ins →
-            </Link>
-            <button
-              onClick={logout}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+        </section>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Summary stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <p className="text-2xl font-semibold text-gray-900">{totalGoals}</p>
-            <p className="text-xs text-gray-500 mt-1">Total goals</p>
-          </div>
-          <div className="bg-white rounded-xl border border-yellow-200 p-4 text-center">
-            <p className="text-2xl font-semibold text-yellow-600">
-              {totalPending}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Pending approval</p>
-          </div>
-          <div className="bg-white rounded-xl border border-green-200 p-4 text-center">
-            <p className="text-2xl font-semibold text-green-600">
-              {totalApproved}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Approved</p>
-          </div>
-        </div>
-
-        {/* Pending approvals banner */}
         {totalPending > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-3">
-            <p className="text-yellow-800 text-sm font-medium">
-              {totalPending} goal{totalPending !== 1 ? "s" : ""} awaiting your
-              review
-            </p>
+          <div className="aq-card border-[#8a6a2a] px-5 py-3">
+            <p className="text-sm text-[#c09a4a]">{totalPending} goal{totalPending !== 1 ? "s" : ""} awaiting review</p>
           </div>
         )}
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">
-                Departmental KPI Push
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Push an approved shared goal to selected direct reports.
-              </p>
-            </div>
+        <section className="aq-card p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-medium tracking-[0.01em]">Departmental KPI Push</h2>
+            <p className="mt-1 text-xs text-[#888]">Push an approved shared goal to selected direct reports.</p>
           </div>
 
           <form onSubmit={handlePushSharedGoal} className="space-y-3">
             <input
               value={sharedGoal.title}
-              onChange={(e) =>
-                setSharedGoal({ ...sharedGoal, title: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              onChange={(e) => setSharedGoal({ ...sharedGoal, title: e.target.value })}
+              className="w-full px-3 py-2 text-sm"
               placeholder="KPI title"
               required
             />
-            <div className="grid grid-cols-4 gap-3">
-              <select
-                value={sharedGoal.thrust_area_id}
-                onChange={(e) =>
-                  setSharedGoal({
-                    ...sharedGoal,
-                    thrust_area_id: e.target.value,
-                  })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                required
-              >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <select value={sharedGoal.thrust_area_id} onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })} className="px-3 py-2 text-sm" required>
                 <option value="">Thrust area</option>
-                {thrustAreas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
+                {thrustAreas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
               </select>
-              <select
-                value={sharedGoal.uom_type}
-                onChange={(e) =>
-                  setSharedGoal({ ...sharedGoal, uom_type: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-              >
-                {UOM_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+              <select value={sharedGoal.uom_type} onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })} className="px-3 py-2 text-sm">
+                {UOM_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              <input
-                type="number"
-                step="any"
-                value={sharedGoal.target}
-                onChange={(e) =>
-                  setSharedGoal({ ...sharedGoal, target: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="Target"
-                required
-              />
-              <input
-                type="number"
-                min="10"
-                max="100"
-                value={sharedGoal.weightage}
-                onChange={(e) =>
-                  setSharedGoal({ ...sharedGoal, weightage: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="Weightage"
-                required
-              />
+              <input type="number" step="any" value={sharedGoal.target} onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })} className="px-3 py-2 text-sm" placeholder="Target" required />
+              <input type="number" min="10" max="100" value={sharedGoal.weightage} onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })} className="px-3 py-2 text-sm" placeholder="Weightage" required />
             </div>
 
             <div className="flex flex-wrap gap-2">
               {team.map(({ employee }) => (
-                <label
-                  key={employee.id}
-                  className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-xs"
-                >
-                  <input
-                    type="checkbox"
-                    checked={sharedGoal.employee_ids.includes(employee.id)}
-                    onChange={() => toggleSharedGoalRecipient(employee.id)}
-                  />
+                <label key={employee.id} className="flex items-center gap-2 rounded-lg border border-[#2a2a2a] px-3 py-1.5 text-xs text-[#888]">
+                  <input type="checkbox" checked={sharedGoal.employee_ids.includes(employee.id)} onChange={() => toggleSharedGoalRecipient(employee.id)} />
                   {employee.name}
                 </label>
               ))}
             </div>
 
-            <button
-              disabled={sharedGoal.employee_ids.length === 0}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
-            >
+            <button disabled={sharedGoal.employee_ids.length === 0} className="btn btn-success">
               Push KPI to {sharedGoal.employee_ids.length} employee(s)
             </button>
           </form>
-        </div>
+        </section>
 
-        {/* Team cards */}
         {team.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-4">👥</div>
-            <h3 className="font-medium text-gray-900 mb-2">
-              No direct reports found
-            </h3>
-            <p className="text-sm text-gray-500">
-              Ask your admin to set up the org hierarchy in the system.
-            </p>
+          <div className="aq-card py-20 text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#2a2a2a]" />
+            <h3 className="mb-2 font-medium text-[#888]">No direct reports found</h3>
+            <p className="text-sm text-[#555]">Ask your admin to set up the org hierarchy in the system.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {team.map(
-              ({
-                employee,
-                goals,
-                totalWeightage,
-                submittedCount,
-                approvedCount,
-                revisionCount,
-              }) => (
-                <EmployeeGoalCard
-                  key={employee.id}
-                  employee={employee}
-                  goals={goals}
-                  totalWeightage={totalWeightage}
-                  submittedCount={submittedCount}
-                  approvedCount={approvedCount}
-                  revisionCount={revisionCount}
-                  onApprove={handleApprove}
-                  onUpdated={fetchTeam}
-                  onReturn={(goal) => setReturningGoal(goal)}
-                />
-              ),
-            )}
+            {team.map(({ employee, goals, totalWeightage, submittedCount, approvedCount, revisionCount }) => (
+              <EmployeeGoalCard
+                key={employee.id}
+                employee={employee}
+                goals={goals}
+                totalWeightage={totalWeightage}
+                submittedCount={submittedCount}
+                approvedCount={approvedCount}
+                revisionCount={revisionCount}
+                onApprove={handleApprove}
+                onUpdated={fetchTeam}
+                onReturn={(goal) => setReturningGoal(goal)}
+              />
+            ))}
           </div>
         )}
-      </main>
+      </div>
 
       <ReturnReasonModal
         isOpen={!!returningGoal}
@@ -341,6 +214,16 @@ export default function ManagerDashboard() {
         onConfirm={handleReturn}
         onClose={() => setReturningGoal(null)}
       />
+    </AppShell>
+  );
+}
+
+function Stat({ label, value, tone }) {
+  const color = tone === "success" ? "text-[#7ab88a]" : tone === "warning" ? "text-[#c09a4a]" : "text-[#f0f0f0]";
+  return (
+    <div className="aq-card stat-card">
+      <p className="label-caps">{label}</p>
+      <p className={`stat-value mt-3 ${color}`}>{value}</p>
     </div>
   );
 }

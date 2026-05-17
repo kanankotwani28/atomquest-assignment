@@ -1,29 +1,27 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { getMyCheckIns } from "../../api/checkins";
+import AppShell from "../../components/AppShell";
 import GoalCheckInCard from "../../components/GoalCheckInCard";
 import { Toaster } from "react-hot-toast";
-import { Link } from "react-router-dom";
 
 export default function EmployeeCheckIns() {
   const { user, logout } = useAuth();
   const [goals, setGoals] = useState([]);
   const [currentQuarter, setCurrentQuarter] = useState(null);
   const [cycle, setCycle] = useState(null);
-  const [allowCheckinOutsideWindow, setAllowCheckinOutsideWindow] =
-    useState(false);
+  const [allowCheckinOutsideWindow, setAllowCheckinOutsideWindow] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
       const res = await getMyCheckIns();
-      console.log("Employee check-ins loaded:", res.data);
       setGoals(res.data.goals);
       setCurrentQuarter(res.data.currentQuarter);
       setAllowCheckinOutsideWindow(res.data.allowCheckinOutsideWindow || false);
       setCycle(res.data.cycle);
     } catch {
-      // handled silently — component shows empty state
+      // Empty state below covers unavailable check-ins.
     } finally {
       setLoading(false);
     }
@@ -33,75 +31,35 @@ export default function EmployeeCheckIns() {
     fetchData();
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">Loading check-ins...</p>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="skeleton h-4 w-44 rounded" />
       </div>
     );
+  }
+
+  const subtitle = `${allowCheckinOutsideWindow ? "Dev mode: check-ins allowed outside windows" : currentQuarter ? `${currentQuarter} window is open` : "No active check-in window"}${cycle ? ` · ${cycle.year}` : ""}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
+    <AppShell user={user} logout={logout} title="Quarterly Check-ins" subtitle={subtitle}>
+      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
-              Quarterly Check-ins
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {allowCheckinOutsideWindow ? (
-                <span className="text-amber-700">
-                  Dev mode: check-ins allowed outside scheduled windows
-                </span>
-              ) : currentQuarter ? (
-                `${currentQuarter} window is open`
-              ) : (
-                "No active check-in window"
-              )}
-              {cycle ? ` · ${cycle.year}` : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/employee/dashboard"
-              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              ← Goal sheet
-            </Link>
-            <span className="text-sm text-gray-600">{user.name}</span>
-            <button
-              onClick={logout}
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <div className="space-y-6">
         {!currentQuarter && !allowCheckinOutsideWindow && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4">
-            <p className="text-blue-800 text-sm font-medium">
-              Check-in window is currently closed. May/June is goal-setting
-              phase.
-            </p>
-            <p className="text-blue-600 text-xs mt-1">
-              Q1 opens in July · Q2 in October · Q3 in January · Q4 / Annual in
-              March-April
+          <div className="aq-card border-[#8a6a2a] px-5 py-4">
+            <p className="text-sm text-[#c09a4a]">Check-in window is currently closed.</p>
+            <p className="mt-1 text-xs text-[#888]">
+              Q1 opens in July · Q2 in October · Q3 in January · Q4 / Annual in March-April
             </p>
           </div>
         )}
 
         {goals.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-4">📋</div>
-            <h3 className="font-medium text-gray-900 mb-2">
-              No approved goals yet
-            </h3>
-            <p className="text-sm text-gray-500">
+          <div className="aq-card py-20 text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#2a2a2a]" />
+            <h3 className="mb-2 font-medium text-[#888]">No approved goals yet</h3>
+            <p className="text-sm text-[#555]">
               Check-ins are available once your manager approves your goals.
             </p>
           </div>
@@ -118,7 +76,7 @@ export default function EmployeeCheckIns() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

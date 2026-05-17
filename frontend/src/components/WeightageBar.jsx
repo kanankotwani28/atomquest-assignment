@@ -1,52 +1,46 @@
-// Why this component: visual feedback is critical for the weightage rule.
-// Employees need to see in real time how much % they've used.
+// Visual feedback for the 100% weightage rule on employee goal sheets.
 export default function WeightageBar({ goals }) {
   const total = goals.reduce((sum, g) => sum + g.weightage, 0);
   const remaining = 100 - total;
   const isComplete = Math.round(total) === 100;
   const isOver = total > 100;
 
-  const barColor = isOver
-    ? 'bg-red-500'
+  const fillClass = isOver
+    ? "fill-danger"
     : isComplete
-    ? 'bg-green-500'
-    : 'bg-indigo-500';
+      ? "fill-success"
+      : "fill-accent";
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">Total weightage</span>
-        <span className={`text-sm font-semibold ${
-          isOver ? 'text-red-600' : isComplete ? 'text-green-600' : 'text-gray-900'
-        }`}>
+    <div className="aq-card p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="label">Total weightage</span>
+        <span
+          className={`mono text-sm ${
+            isOver ? "text-[#c47a7a]" : isComplete ? "text-[#7ab88a]" : "text-[#f0f0f0]"
+          }`}
+        >
           {total.toFixed(1)}% / 100%
         </span>
       </div>
 
-      {/* Progress bar track */}
-      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div className="progress-track">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+          className={`progress-fill ${fillClass}`}
           style={{ width: `${Math.min(total, 100)}%` }}
         />
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-gray-500">
-          {goals.length} / 8 goals used
-        </span>
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-xs text-[#888]">{goals.length} / 8 goals used</span>
         {isOver ? (
-          <span className="text-xs text-red-600 font-medium">
-            ⚠ Exceeds 100% by {(total - 100).toFixed(1)}%
+          <span className="text-xs text-[#c47a7a]">
+            Exceeds 100% by {(total - 100).toFixed(1)}%
           </span>
         ) : isComplete ? (
-          <span className="text-xs text-green-600 font-medium">
-            ✓ Ready to submit
-          </span>
+          <span className="text-xs text-[#7ab88a]">Ready to submit</span>
         ) : (
-          <span className="text-xs text-gray-500">
-            {remaining.toFixed(1)}% remaining
-          </span>
+          <span className="text-xs text-[#888]">{remaining.toFixed(1)}% remaining</span>
         )}
       </div>
     </div>
