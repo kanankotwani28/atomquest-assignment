@@ -1,6 +1,56 @@
 import api from './axios';
 
-export const getMyCheckIns     = ()              => api.get('/checkins/my');
-export const upsertCheckIn     = (data)          => api.post('/checkins', data);
-export const getTeamCheckIns   = ()              => api.get('/checkins/team');
-export const addManagerComment = (id, comment)   => api.put(`/checkins/${id}/comment`, { comment });
+const normalizeCheckIn = (checkIn) => ({
+  ...checkIn,
+  completionDate: checkIn.completionDate ?? checkIn.completion_date ?? null,
+  progressStatus: checkIn.progressStatus ?? checkIn.progress_status,
+  managerComment: checkIn.managerComment ?? checkIn.manager_comment ?? null,
+});
+
+const normalizeGoal = (goal) => {
+  const checkIns = goal.checkIns ?? goal.check_ins ?? [];
+
+  return {
+    ...goal,
+    uomType: goal.uomType ?? goal.uom_type,
+    thrustArea: goal.thrustArea ?? goal.thrust_area,
+    checkIns: checkIns.map(normalizeCheckIn),
+  };
+};
+
+const normalizeMyCheckIns = (data) => ({
+  ...data,
+  goals: (data.goals ?? []).map(normalizeGoal),
+});
+
+const normalizeTeamCheckIns = (data) => ({
+  ...data,
+  team: (data.team ?? []).map((member) => ({
+    ...member,
+    goals: (member.goals ?? []).map(normalizeGoal),
+  })),
+});
+
+const toCheckInPayload = (data) => ({
+  goal_id: data.goalId ?? data.goal_id,
+  quarter: data.quarter,
+  actual: data.actual,
+  completion_date: data.completionDate ?? data.completion_date,
+  progress_status: data.progressStatus ?? data.progress_status,
+});
+
+export const getMyCheckIns = async () => {
+  const res = await api.get('/checkins/my');
+  return { ...res, data: normalizeMyCheckIns(res.data) };
+};
+
+export const upsertCheckIn = (data) => api.post('/checkins', toCheckInPayload(data));
+
+export const getTeamCheckIns = async () => {
+  const res = await api.get('/checkins/team');
+  return { ...res, data: normalizeTeamCheckIns(res.data) };
+};
+
+export const addManagerComment = (id, comment) => (
+  api.put(`/checkins/${id}/comment`, { comment })
+);

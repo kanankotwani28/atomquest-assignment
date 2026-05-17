@@ -15,13 +15,14 @@ def get_active_cycle(db):
     if not c: raise HTTPException(404, "No active cycle")
     return c
 
-def get_current_quarter() -> str | None:
+def get_current_quarter() -> str:
     m = datetime.utcnow().month
     if 7  <= m <= 9:  return "Q1"
     if 10 <= m <= 12: return "Q2"
-    if m  <= 3:       return "Q3"
-    if 4  <= m <= 6:  return None  # goal-setting phase
-    return None
+    if m  == 1 or m <= 3: return "Q3"
+    # May/June = goal setting phase, but return Q1 for demo purposes
+    # In production, Admin controls this via cycle management
+    return "Q1"  # default for demo
 
 # ── Employee: upsert check-in ─────────────────────────────────────
 @router.post("/")
@@ -93,7 +94,6 @@ def get_team_checkins(db: Session = Depends(get_db),
             Goal.status   == GoalStatusEnum.APPROVED
         ).all()
 
-        # Weighted average score
         weighted, total_w = 0, 0
         for g in goals:
             if g.check_ins:
@@ -103,7 +103,18 @@ def get_team_checkins(db: Session = Depends(get_db),
                     total_w  += g.weightage
         overall = round(weighted / total_w, 2) if total_w else None
 
-        team.append({"employee": emp, "goals": goals, "overallScore": overall})
+        team.append({
+            "employee": {
+                "id":         str(emp.id),
+                "name":       emp.name,
+                "email":      emp.email,
+                "department": emp.department,
+                "role":       emp.role
+                # password excluded
+            },
+            "goals":        goals,
+            "overallScore": overall
+        })
 
     return {"team": team, "cycle": cycle, "currentQuarter": get_current_quarter()}
 

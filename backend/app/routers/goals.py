@@ -94,8 +94,14 @@ def update_goal(goal_id: str, body: GoalUpdate,
             raise HTTPException(status_code=400,
                 detail=f"Total would be {other_total + body.weightage}%. Must be ≤ 100%")
 
+    # If this goal was RETURNED and the employee edits it, automatically mark it SUBMITTED
+    was_returned = (goal.status == GoalStatusEnum.RETURNED)
+
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(goal, field, value)
+
+    if was_returned:
+        goal.status = GoalStatusEnum.SUBMITTED
 
     db.commit()
     db.refresh(goal)
@@ -160,12 +166,15 @@ def submit_all(db: Session = Depends(get_db),
     db.commit()
     return {"message": f"{len(submittable)} goal(s) submitted for approval"}
 
-# ── Manager: get team goals ───────────────────────────────────────
 @router.get("/team")
 def get_team_goals(db: Session = Depends(get_db),
                    current_user: User = Depends(require_role(RoleEnum.MANAGER))):
     cycle = get_active_cycle(db)
-    subordinates = db.query(User).filter(User.manager_id == current_user.id).all()
+
+    # Select only safe fields — never expose password
+    subordinates = db.query(User).filter(
+        User.manager_id == current_user.id
+    ).all()
 
     team = []
     for emp in subordinates:
@@ -175,8 +184,16 @@ def get_team_goals(db: Session = Depends(get_db),
         total_w   = sum(g.weightage for g in goals)
         submitted = sum(1 for g in goals if g.status == GoalStatusEnum.SUBMITTED)
         approved  = sum(1 for g in goals if g.status == GoalStatusEnum.APPROVED)
+
         team.append({
-            "employee":       emp,
+            "employee": {
+                "id":         str(emp.id),
+                "name":       emp.name,
+                "email":      emp.email,
+                "department": emp.department,
+                "role":       emp.role
+                # password intentionally excluded
+            },
             "goals":          goals,
             "totalWeightage": total_w,
             "submittedCount": submitted,
