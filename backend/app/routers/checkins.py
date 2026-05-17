@@ -15,14 +15,13 @@ def get_active_cycle(db):
     if not c: raise HTTPException(404, "No active cycle")
     return c
 
-def get_current_quarter() -> str:
+def get_current_quarter() -> str | None:
     m = datetime.utcnow().month
     if 7  <= m <= 9:  return "Q1"
     if 10 <= m <= 12: return "Q2"
-    if m  == 1 or m <= 3: return "Q3"
-    # May/June = goal setting phase, but return Q1 for demo purposes
-    # In production, Admin controls this via cycle management
-    return "Q1"  # default for demo
+    if 1  <= m <= 2:  return "Q3"
+    if 3  <= m <= 4:  return "Q4"
+    return None  # May/June is goal-setting phase; no check-in window.
 
 # ── Employee: upsert check-in ─────────────────────────────────────
 @router.post("/")
@@ -36,6 +35,15 @@ def upsert_checkin(body: CheckInCreate,
         raise HTTPException(403, "Not your goal")
     if goal.status != GoalStatusEnum.APPROVED:
         raise HTTPException(400, "Check-ins only allowed on approved goals")
+
+    current_quarter = get_current_quarter()
+    if current_quarter is None:
+        raise HTTPException(400, "Check-in window is closed. May/June is goal-setting phase.")
+    if body.quarter != current_quarter:
+        raise HTTPException(
+            400,
+            f"{body.quarter} check-in is not open. Current open window is {current_quarter}."
+        )
 
     score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
 

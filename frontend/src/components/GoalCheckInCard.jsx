@@ -21,6 +21,7 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
   }
 
   const latestCheckIn = goal.checkIns[goal.checkIns.length - 1];
+  const canEditActiveQuarter = !!currentQuarter && activeQuarter === currentQuarter;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -76,6 +77,7 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
         {/* Quarter label */}
         <p className="text-xs text-gray-400 mt-2 text-center">
           {activeQuarter} window opens: {QUARTER_LABELS[activeQuarter]}
+          {!canEditActiveQuarter && ' · read only'}
         </p>
       </div>
 
@@ -86,6 +88,7 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved }) {
           quarter={activeQuarter}
           existingCheckIn={checkInMap[activeQuarter]}
           onSaved={onSaved}
+          canEdit={canEditActiveQuarter}
         />
       </div>
     </div>

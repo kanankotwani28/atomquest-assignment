@@ -65,10 +65,10 @@ export default function EmployeeCheckIns() {
         {!currentQuarter && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4">
             <p className="text-blue-800 text-sm font-medium">
-              Check-in window is currently closed
+              Check-in window is currently closed. May/June is goal-setting phase.
             </p>
             <p className="text-blue-600 text-xs mt-1">
-              Q1 opens in July · Q2 in October · Q3 in January · Q4 in March
+              Q1 opens in July · Q2 in October · Q3 in January · Q4 / Annual in March-April
             </p>
           </div>
         )}

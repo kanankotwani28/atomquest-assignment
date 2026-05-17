@@ -16,7 +16,7 @@ const UOM_LABELS = {
   ZERO:        'Zero = Success',
 };
 
-export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved }) {
+export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, canEdit = true }) {
   const [actual,          setActual]         = useState(existingCheckIn?.actual ?? '');
   const [completionDate,  setCompletionDate] = useState(
     existingCheckIn?.completionDate
@@ -54,6 +54,8 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
+
     const payload = {
       goalId: goal.id,
       quarter,
@@ -71,7 +73,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
       toast.success(`${quarter} check-in saved`);
       onSaved();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save');
+      toast.error(err.response?.data?.detail || err.response?.data?.error || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -110,8 +112,10 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
               type="date"
               value={completionDate}
               onChange={e => setCompletionDate(e.target.value)}
+              disabled={!canEdit}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                         focus:outline-none focus:ring-2 focus:ring-indigo-400
+                         disabled:bg-gray-100 disabled:text-gray-400"
             />
           ) : (
             <input
@@ -119,9 +123,11 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
               step="any"
               value={actual}
               onChange={e => setActual(e.target.value)}
+              disabled={!canEdit}
               placeholder={goal.uomType === 'ZERO' ? '0' : 'Enter actual value'}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                         focus:outline-none focus:ring-2 focus:ring-indigo-400
+                         disabled:bg-gray-100 disabled:text-gray-400"
             />
           )}
         </div>
@@ -133,8 +139,10 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
           <select
             value={progressStatus}
             onChange={e => setProgressStatus(e.target.value)}
+            disabled={!canEdit}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                       bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                       bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400
+                       disabled:bg-gray-100 disabled:text-gray-400"
           >
             {PROGRESS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -167,12 +175,12 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved })
 
       <button
         onClick={handleSave}
-        disabled={saving || (!actual && !completionDate)}
+        disabled={!canEdit || saving || (!actual && !completionDate)}
         className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium
                    hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed
                    transition-colors"
       >
-        {saving ? 'Saving...' : existingCheckIn ? 'Update check-in' : 'Save check-in'}
+        {!canEdit ? 'Check-in window closed' : saving ? 'Saving...' : existingCheckIn ? 'Update check-in' : 'Save check-in'}
       </button>
     </div>
   );
