@@ -34,6 +34,15 @@ class ThrustAreaOut(BaseModel):
         from_attributes = True
 
 
+# ── Cycles ──────────────────────────────────────────────────────────
+class CycleOut(BaseModel):
+    id:     UUID4
+    year:   int
+    phase:  str  # e.g., "Q1", "H1"
+    class Config:
+        from_attributes = True
+
+
 # ── Goals ───────────────────────────────────────────────────────────
 class GoalCreate(BaseModel):
     title:          str      = Field(..., min_length=3, max_length=200)

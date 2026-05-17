@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   getMyGoals,
   getThrustAreas,
+  getActiveCycle,
   createGoal,
   updateGoal,
   deleteGoal,
@@ -25,8 +26,9 @@ export default function EmployeeDashboard() {
   const fetchGoals = async () => {
     try {
       const res = await getMyGoals();
-      setGoals(res.data.goals || []);
-      setCycle(res.data.cycle);
+      console.log("Goals API response:", res.data);
+      // API returns List[GoalOut] directly, not wrapped in a goals/cycle object
+      setGoals(Array.isArray(res.data) ? res.data : []);
     } catch {
       toast.error("Failed to load goals");
     } finally {
@@ -36,9 +38,14 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     fetchGoals();
-    getThrustAreas()
-      .then((r) => setThrustAreas(r.data))
-      .catch(() => {});
+    Promise.all([
+      getThrustAreas()
+        .then((r) => setThrustAreas(r.data))
+        .catch(() => {}),
+      getActiveCycle()
+        .then((r) => setCycle(r.data))
+        .catch(() => {}),
+    ]);
   }, []);
 
   const totalWeightage = goals.reduce((s, g) => s + g.weightage, 0);
@@ -55,17 +62,26 @@ export default function EmployeeDashboard() {
 
   const handleSave = async (data) => {
     try {
+      console.log("Saving goal with data:", data);
       if (editingGoal) {
-        await updateGoal(editingGoal.id, data);
+        const res = await updateGoal(editingGoal.id, data);
+        console.log("Update response:", res);
         toast.success("Goal updated");
       } else {
-        await createGoal(data);
+        const res = await createGoal(data);
+        console.log("Create response:", res);
         toast.success("Goal added");
       }
       setEditingGoal(null);
-      fetchGoals();
+      await fetchGoals();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to save goal");
+      console.error("Error saving goal:", err);
+      console.error("Error response:", err.response?.data);
+      const errorMsg =
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        "Failed to save goal";
+      toast.error(errorMsg);
       throw err; // keeps modal open on error
     }
   };

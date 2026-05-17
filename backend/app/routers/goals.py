@@ -4,7 +4,7 @@ from sqlalchemy import func
 from typing import List
 from app.database import get_db
 from app.models.models import Goal, GoalStatusEnum, Cycle, User, RoleEnum, ThrustArea
-from app.schemas.schemas import GoalCreate, GoalUpdate, GoalOut, ManagerGoalEdit, ThrustAreaOut
+from app.schemas.schemas import GoalCreate, GoalUpdate, GoalOut, ManagerGoalEdit, ThrustAreaOut, CycleOut
 from app.dependencies import get_current_user, require_role
 from app.services.audit_logger import log_change
 from datetime import datetime
@@ -22,6 +22,13 @@ def get_active_cycle(db: Session) -> Cycle:
 def get_thrust_areas(db: Session = Depends(get_db),
                      _=Depends(get_current_user)):
     return db.query(ThrustArea).order_by(ThrustArea.name).all()
+
+# ── Get active cycle ───────────────────────────────────────────────
+@router.get("/cycle", response_model=CycleOut)
+def get_active_cycle_endpoint(db: Session = Depends(get_db),
+                              _=Depends(get_current_user)):
+    cycle = get_active_cycle(db)
+    return cycle
 
 # ── Employee: get my goals ────────────────────────────────────────
 @router.get("/my", response_model=List[GoalOut])
