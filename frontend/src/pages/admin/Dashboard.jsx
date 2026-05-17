@@ -569,7 +569,9 @@ export default function AdminDashboard() {
                     <td className="py-2 text-gray-500">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
-                    <td className="text-gray-500">{log.goal_id}</td>
+                    <td className="text-gray-500">
+                      {log.goal_title || log.goal_id}
+                    </td>
                     <td className="text-gray-900">{log.field}</td>
                     <td className="text-gray-500">{log.old_value || "-"}</td>
                     <td className="text-gray-500">{log.new_value || "-"}</td>

@@ -76,7 +76,21 @@ def completion_dashboard(db: Session = Depends(get_db),
 @router.get("/audit-logs", response_model=List[AuditLogOut])
 def get_audit_logs(db: Session = Depends(get_db),
                    _=Depends(require_role(RoleEnum.ADMIN))):
-    return db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(500).all()
+    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(500).all()
+    result = []
+    for l in logs:
+        result.append({
+            "id": str(l.id),
+            "goal_id": str(l.goal_id),
+            "goal_title": l.goal.title if l.goal else None,
+            "changed_by_id": str(l.changed_by_id),
+            "field": l.field,
+            "old_value": l.old_value,
+            "new_value": l.new_value,
+            "reason": l.reason,
+            "created_at": l.created_at.isoformat()
+        })
+    return result
 
 # ── Unlock a goal (post-approval edit) ───────────────────────────
 @router.post("/goals/{goal_id}/unlock")

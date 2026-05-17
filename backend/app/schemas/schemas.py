@@ -138,6 +138,7 @@ class AuditLogOut(BaseModel):
     id:            UUID4
     goal_id:       UUID4
     changed_by_id: UUID4
+    goal_title:    Optional[str] = None
     field:         str
     old_value:     Optional[str]
     new_value:     Optional[str]
