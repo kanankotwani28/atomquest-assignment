@@ -46,11 +46,6 @@ const ICON_MAP = {
   "Unlock Goals":    Lock,
 };
 
-function initials(name = "") {
-  return name.split(" ").filter(Boolean).slice(0, 2)
-    .map((p) => p[0]?.toUpperCase()).join("") || "AQ";
-}
-
 const AtomQuestLogo = () => (
   <div className="admin-logo">
     <div className="admin-logo-mark" style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg, #4F46E5, #6366F1)", color: "#fff", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, boxShadow: "0 0 14px rgba(91,76,240,0.28)", flexShrink: 0 }}>

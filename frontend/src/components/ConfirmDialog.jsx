@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 export default function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger = false, onConfirm, onCancel }) {
   return (
     <div
@@ -46,24 +44,4 @@ export default function ConfirmDialog({ title, message, confirmLabel = "Confirm"
       </div>
     </div>
   );
-}
-
-export function useConfirm() {
-  const [dialog, setDialog] = useState(null);
-
-  const confirm = ({ title, message, confirmLabel, danger, onConfirm }) => {
-    setDialog({ title, message, confirmLabel, danger, onConfirm });
-  };
-
-  const close = () => setDialog(null);
-
-  const Dialog = dialog ? (
-    <ConfirmDialog
-      {...dialog}
-      onCancel={close}
-      onConfirm={() => { dialog.onConfirm(); close(); }}
-    />
-  ) : null;
-
-  return { confirm, Dialog };
 }

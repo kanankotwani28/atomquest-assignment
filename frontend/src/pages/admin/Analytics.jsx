@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAnalytics } from "../../api/admin";
 import ScoreBadge from "../../components/ScoreBadge";
+import { AlertTriangle } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -11,7 +12,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
   ReferenceLine
 } from "recharts";
 
@@ -23,6 +23,44 @@ const UOM_LABELS = {
   TIMELINE: "Timeline",
   ZERO: "Zero Based"
 };
+
+function CustomBarTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[#161616] border border-[#2a2a2a] p-3 rounded-lg text-xs space-y-1">
+        <p className="font-semibold text-[#f5f5f5] mb-1.5">{payload[0].payload.employee}</p>
+        {payload.map((bar) => (
+          <div key={bar.name} className="flex justify-between items-center gap-4">
+            <span className="text-[#909090]">{bar.name}:</span>
+            <span className="font-semibold" style={{ color: bar.color }}>
+              {bar.value !== null && bar.value !== undefined ? `${bar.value}%` : "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
+function CustomManagerTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[#161616] border border-[#2a2a2a] p-3 rounded-lg text-xs space-y-1">
+        <p className="font-semibold text-[#f5f5f5] mb-1.5">{payload[0].payload.manager}</p>
+        {payload.map((bar) => (
+          <div key={bar.name} className="flex justify-between items-center gap-4">
+            <span className="text-[#909090]">{bar.name}:</span>
+            <span className="font-semibold" style={{ color: bar.color }}>
+              {bar.value !== null && bar.value !== undefined ? `${bar.value}%` : "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
@@ -44,7 +82,8 @@ export default function Analytics() {
   };
 
   useEffect(() => {
-    fetchAnalyticsData();
+    const init = async () => { await fetchAnalyticsData(); };
+    init();
   }, []);
 
   if (loading) {
@@ -106,45 +145,6 @@ export default function Analytics() {
 
   const truncate = (name, length = 10) => {
     return name.length > length ? name.substring(0, length) + "…" : name;
-  };
-
-  // Custom tooltips for Recharts
-  const CustomBarTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-[#161616] border border-[#2a2a2a] p-3 rounded-lg text-xs space-y-1">
-          <p className="font-semibold text-[#f5f5f5] mb-1.5">{payload[0].payload.employee}</p>
-          {payload.map((bar) => (
-            <div key={bar.name} className="flex justify-between items-center gap-4">
-              <span className="text-[#909090]">{bar.name}:</span>
-              <span className="mono font-semibold" style={{ color: bar.color }}>
-                {bar.value !== null && bar.value !== undefined ? `${bar.value}%` : "—"}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomManagerTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-[#161616] border border-[#2a2a2a] p-3 rounded-lg text-xs space-y-1">
-          <p className="font-semibold text-[#f5f5f5] mb-1.5">{payload[0].payload.manager}</p>
-          {payload.map((bar) => (
-            <div key={bar.name} className="flex justify-between items-center gap-4">
-              <span className="text-[#909090]">{bar.name}:</span>
-              <span className="mono font-semibold" style={{ color: bar.color }}>
-                {bar.value !== null && bar.value !== undefined ? `${bar.value}%` : "—"}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
   };
 
   return (

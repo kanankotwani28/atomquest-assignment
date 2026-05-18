@@ -8,7 +8,7 @@ import ReturnReasonModal from "../../components/ReturnReasonModal";
 import { SkeletonPage } from "../../components/Skeleton";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import toast, { Toaster } from "react-hot-toast";
-import { Users, Clock, CheckCircle, Target, Send, ShieldAlert } from "lucide-react";
+import { Users, Send, ShieldAlert } from "lucide-react";
 
 const initialSharedGoal = {
   title: "",
@@ -50,7 +50,8 @@ const [loading, setLoading]         = useState(true);
   };
 
   useEffect(() => {
-    fetchTeam();
+    const init = async () => { await fetchTeam(); };
+    init();
     getThrustAreas().then((res) => setThrustAreas(res.data)).catch(() => {});
   }, []);
 
@@ -120,7 +121,6 @@ const [loading, setLoading]         = useState(true);
   const teamScore = totalGoals ? ((totalApproved / totalGoals) * 100).toFixed(1) : "0.0";
 
   if (loading) return <SkeletonPage cards={4} />;
-  }
 
   return (
     <AppShell user={user} logout={logout} title="Manager Workspace" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}>

@@ -32,7 +32,8 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
-    fetchGoals();
+    const init = async () => { await fetchGoals(); };
+    init();
     Promise.all([
       getThrustAreas().then((r) => setThrustAreas(r.data)).catch(() => {}),
       getActiveCycle().then((r) => setCycle(r.data)).catch(() => {}),

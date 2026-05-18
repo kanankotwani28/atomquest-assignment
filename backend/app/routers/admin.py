@@ -131,15 +131,15 @@ def get_admin_analytics(db: Session = Depends(get_db),
     # Summary calculations
     overall_scores_list = [item["overall"] for item in employee_scores_list if item["overall"] is not None]
     avg_overall_score = round(sum(overall_scores_list) / len(overall_scores_list), 1) if overall_scores_list else None
-    
+
     total_employees = len(employees)
     total_goals = len(goals)
 
-employees_with_checkin = 0
     goal_ids_with_checkin = set(
         row[0] for row in
         db.query(CheckIn.goal_id).join(Goal).filter(Goal.cycle_id == cycle.id).distinct().all()
     )
+    employees_with_checkin = 0
     for emp in employees:
         emp_goal_ids = [g.id for g in goals_by_owner.get(emp.id, [])]
         if any(gid in goal_ids_with_checkin for gid in emp_goal_ids):

@@ -1,57 +1,52 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axios';
 
-// Why context: user info (who is logged in, what role)
-// is needed by many components across the app.
-// Instead of passing it as props through every level (prop drilling),
-// context makes it available anywhere with one line.
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // true while checking existing session
+  const [loading, setLoading] = useState(true);
 
-  // On app load: check if a token exists and is still valid
-  // This restores the session after a page refresh
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      api.get('/auth/me')
-        .then(res => setUser(res.data))
-        .catch(() => {
-          // Token expired or invalid — clear it
+    const init = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await api.get('/auth/me');
+          setUser(res.data);
+        } catch {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-        })
-        .finally(() => setLoading(false));
-    } else {
+        }
+      }
       setLoading(false);
-    }
+    };
+    init();
   }, []);
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
-    return res.data.user; // return user so caller knows the role to redirect
+    return res.data.user;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-// Custom hook — components call useAuth() instead of useContext(AuthContext)
-// Cleaner and gives a helpful error if used outside the provider
-export const useAuth = () => {
+/* eslint-disable react-refresh/only-export-components */
+export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used inside AuthProvider');
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
-};
+}

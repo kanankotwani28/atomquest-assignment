@@ -12,7 +12,6 @@ export default function EmployeeCheckIns() {
   const [goals, setGoals] = useState([]);
   const [currentQuarter, setCurrentQuarter] = useState(null);
   const [checkinWindowOpen, setCheckinWindowOpen] = useState(false);
-  const [cycle, setCycle] = useState(null);
   const [allowCheckinOutsideWindow, setAllowCheckinOutsideWindow] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -23,12 +22,14 @@ export default function EmployeeCheckIns() {
       setCurrentQuarter(res.data.currentQuarter);
       setCheckinWindowOpen(res.data.checkinWindowOpen || false);
       setAllowCheckinOutsideWindow(res.data.allowCheckinOutsideWindow || false);
-      setCycle(res.data.cycle);
     } catch { /* empty state below */ }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    const init = async () => { await fetchData(); };
+    init();
+  }, []);
 
   if (loading) return <SkeletonPage cards={3} />;
 

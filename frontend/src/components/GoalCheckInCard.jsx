@@ -39,7 +39,7 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved, allowCh
           const isCompleted = ci && ci.progressStatus === "COMPLETED";
           return (
             <button key={q} onClick={() => setActiveQuarter(q)}
-              style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 12px", fontSize: 11, fontWeight: 500, borderRadius: 7, border: "none", cursor: "pointer", transition: "all 150ms ease", background: isActive ? "rgba(11,22,55,0.95)" : "transparent", color: isActive ? "#fff" : "#64748B", border: isActive ? "1px solid rgba(255,255,255,0.08)" : "1px solid transparent", boxShadow: isActive ? "0 2px 8px rgba(0,0,0,0.3)" : "none" }}>
+              style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 12px", fontSize: 11, fontWeight: 500, borderRadius: 7, cursor: "pointer", transition: "all 150ms ease", background: isActive ? "rgba(11,22,55,0.95)" : "transparent", color: isActive ? "#fff" : "#64748B", border: isActive ? "1px solid rgba(255,255,255,0.08)" : "1px solid transparent", boxShadow: isActive ? "0 2px 8px rgba(0,0,0,0.3)" : "none" }}>
               <span>{q}</span>
               {isCompleted && <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#10B981" }} />}
             </button>

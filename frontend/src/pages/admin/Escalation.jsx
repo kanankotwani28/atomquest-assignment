@@ -73,8 +73,10 @@ export default function Escalation() {
     }
   };
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    initializeData();
+    const init = async () => { await initializeData(); };
+    init();
   }, []);
 
   const handleRuleChange = (type, field, value) => {
