@@ -120,7 +120,7 @@ export default function ManagerDashboard() {
       user={user}
       logout={logout}
       title="Team Overview"
-      subtitle={cycle ? `${cycle.year} · ${cycle.phase} · ${team.length} direct reports` : "Active cycle"}
+      subtitle={cycle ? `${cycle.year} · ${cycle.phase} · ${team.length} direct reports` : "Active Cycle"}
     >
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
@@ -130,53 +130,53 @@ export default function ManagerDashboard() {
           <Stat label="Pending Approvals" value={totalPending} tone="warning" />
           <Stat label="Approved" value={totalApproved} tone="success" />
           <div className="aq-card stat-card">
-            <p className="label-caps">Overall Team Score</p>
-            <p className="mono mt-3 text-[32px] font-medium text-[#f0f0f0]">{teamScore}%</p>
+            <span className="label">Overall Team Score</span>
+            <span className="number-large mt-3 block">{teamScore}%</span>
           </div>
         </section>
 
         {totalPending > 0 && (
-          <div className="aq-card border-[#8a6a2a] px-5 py-3">
-            <p className="text-sm text-[#c09a4a]">{totalPending} goal{totalPending !== 1 ? "s" : ""} awaiting review</p>
+          <div className="notice-bar amber">
+            {totalPending} goal{totalPending !== 1 ? "s" : ""} awaiting review
           </div>
         )}
 
         <section className="aq-card p-5">
           <div className="mb-4">
-            <h2 className="text-sm font-medium tracking-[0.01em]">Departmental KPI Push</h2>
-            <p className="mt-1 text-xs text-[#888]">Push an approved shared goal to selected direct reports.</p>
+            <h2 className="text-xs font-semibold text-[#f5f5f5] uppercase tracking-[0.06em]">Departmental KPI Push</h2>
+            <p className="mt-1 text-xs text-[#555555]">Push an approved shared goal to selected direct reports.</p>
           </div>
 
           <form onSubmit={handlePushSharedGoal} className="space-y-3">
             <input
               value={sharedGoal.title}
               onChange={(e) => setSharedGoal({ ...sharedGoal, title: e.target.value })}
-              className="w-full px-3 py-2 text-sm"
+              className="aq-input w-full"
               placeholder="KPI title"
               required
             />
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <select value={sharedGoal.thrust_area_id} onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })} className="px-3 py-2 text-sm" required>
+              <select value={sharedGoal.thrust_area_id} onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })} className="aq-input w-full" required>
                 <option value="">Thrust area</option>
                 {thrustAreas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
               </select>
-              <select value={sharedGoal.uom_type} onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })} className="px-3 py-2 text-sm">
+              <select value={sharedGoal.uom_type} onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })} className="aq-input w-full">
                 {UOM_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              <input type="number" step="any" value={sharedGoal.target} onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })} className="px-3 py-2 text-sm" placeholder="Target" required />
-              <input type="number" min="10" max="100" value={sharedGoal.weightage} onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })} className="px-3 py-2 text-sm" placeholder="Weightage" required />
+              <input type="number" step="any" value={sharedGoal.target} onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })} className="aq-input w-full" placeholder="Target" required />
+              <input type="number" min="10" max="100" value={sharedGoal.weightage} onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })} className="aq-input w-full" placeholder="Weightage" required />
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 py-1">
               {team.map(({ employee }) => (
-                <label key={employee.id} className="flex items-center gap-2 rounded-lg border border-[#2a2a2a] px-3 py-1.5 text-xs text-[#888]">
+                <label key={employee.id} className="flex items-center gap-2 rounded border border-[#222222] bg-[#111111] px-3 py-1.5 text-xs text-[#909090] cursor-pointer hover:border-[#2e2e2e] transition-colors">
                   <input type="checkbox" checked={sharedGoal.employee_ids.includes(employee.id)} onChange={() => toggleSharedGoalRecipient(employee.id)} />
                   {employee.name}
                 </label>
               ))}
             </div>
 
-            <button disabled={sharedGoal.employee_ids.length === 0} className="btn btn-success">
+            <button disabled={sharedGoal.employee_ids.length === 0} className="btn btn-confirm">
               Push KPI to {sharedGoal.employee_ids.length} employee(s)
             </button>
           </form>
@@ -184,9 +184,11 @@ export default function ManagerDashboard() {
 
         {team.length === 0 ? (
           <div className="aq-card py-20 text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#2a2a2a]" />
-            <h3 className="mb-2 font-medium text-[#888]">No direct reports found</h3>
-            <p className="text-sm text-[#555]">Ask your admin to set up the org hierarchy in the system.</p>
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#222222] bg-[#0d0d0d] flex items-center justify-center text-[#555555]">
+              !
+            </div>
+            <h3 className="mb-2 font-medium text-[#909090]">No direct reports found</h3>
+            <p className="text-sm text-[#555555]">Ask your admin to set up the org hierarchy in the system.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -219,11 +221,11 @@ export default function ManagerDashboard() {
 }
 
 function Stat({ label, value, tone }) {
-  const color = tone === "success" ? "text-[#7ab88a]" : tone === "warning" ? "text-[#c09a4a]" : "text-[#f0f0f0]";
+  const color = tone === "success" ? "text-[#4d9966]" : tone === "warning" ? "text-[#c49a2a]" : "text-[#f5f5f5]";
   return (
     <div className="aq-card stat-card">
-      <p className="label-caps">{label}</p>
-      <p className={`stat-value mt-3 ${color}`}>{value}</p>
+      <span className="label text-[#555555]">{label}</span>
+      <span className={`number-large mt-3 block ${color}`}>{value}</span>
     </div>
   );
 }

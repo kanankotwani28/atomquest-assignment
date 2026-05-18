@@ -17,7 +17,7 @@ const UOM_LABELS = {
 };
 
 export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, canEdit = true }) {
-  const [actual, setActual] = useState(existingCheckIn?.actual ?? existingCheckIn?.actual ?? "");
+  const [actual, setActual] = useState(existingCheckIn?.actual ?? "");
   const [completionDate, setCompletionDate] = useState(
     existingCheckIn?.completionDate || existingCheckIn?.completion_date
       ? new Date(existingCheckIn?.completionDate || existingCheckIn?.completion_date).toISOString().split("T")[0]
@@ -29,6 +29,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
   const [saving, setSaving] = useState(false);
 
   const uom = goal.uomType || goal.uom_type;
+  
   const previewScore = () => {
     if (uom === "ZERO") return actual === "" ? null : parseFloat(actual) === 0 ? 100 : 0;
     if (uom === "NUMERIC_MIN") {
@@ -54,7 +55,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
     if (!canEdit) return;
 
     const payload = {
-      goal_id: goal.id,
+      goal_id: goal.id || goal._id,
       quarter,
       actual: uom !== "TIMELINE" ? (actual === "" ? undefined : parseFloat(actual)) : undefined,
       completion_date: uom === "TIMELINE" && completionDate ? new Date(completionDate).toISOString() : undefined,
@@ -74,23 +75,47 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
   };
 
   const liveScore = previewScore();
-  const isTimeline = goal.uomType === "TIMELINE";
+  const isTimeline = uom === "TIMELINE";
   const scorePct = liveScore ?? existingCheckIn?.score ?? 0;
-  const fillClass = scorePct >= 80 ? "fill-success" : scorePct >= 50 ? "fill-warning" : "fill-danger";
+  
+  const getProgressFillClass = (score) => {
+    if (score >= 80) return "excellent";
+    if (score >= 60) return "good";
+    if (score >= 40) return "warn";
+    return "poor";
+  };
+  
+  const fillClass = getProgressFillClass(scorePct);
+
+  const formatTimelineTarget = (targetVal) => {
+    try {
+      return new Date(targetVal).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return targetVal;
+    }
+  };
 
   return (
     <div className="space-y-4">
+      {/* Progress tracker inside check-in form */}
       <div className="flex items-center gap-3">
         <div className="progress-track flex-1">
           <div className={`progress-fill ${fillClass}`} style={{ width: `${Math.min(scorePct, 100)}%` }} />
         </div>
-        <span className="mono w-16 text-right text-xs text-[#f0f0f0]">{scorePct.toFixed(1)}%</span>
+        <span className="mono text-xs text-[#f5f5f5] w-12 text-right">
+          {scorePct.toFixed(1)}%
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Input/date block */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-[#888]">
-            {isTimeline ? "Completion date" : "Actual achievement"}
+          <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">
+            {isTimeline ? "Completion Date" : "Actual Achievement"}
           </label>
           {isTimeline ? (
             <input
@@ -98,7 +123,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
               value={completionDate}
               onChange={(e) => setCompletionDate(e.target.value)}
               disabled={!canEdit}
-              className="w-full px-3 py-2 text-sm disabled:text-[#555]"
+              className="aq-input w-full"
             />
           ) : (
             <input
@@ -107,50 +132,68 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
               value={actual}
               onChange={(e) => setActual(e.target.value)}
               disabled={!canEdit}
-              placeholder={goal.uomType === "ZERO" ? "0" : "Enter actual value"}
-              className="w-full px-3 py-2 text-sm disabled:text-[#555]"
+              placeholder={uom === "ZERO" ? "0" : "Enter actual value"}
+              className="aq-input w-full"
             />
           )}
-          <p className="mt-1 text-xs text-[#555]">
-            {UOM_LABELS[goal.uomType]} · Target: {goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}
+          <p className="mt-1.5 text-[11px] text-[#555555]">
+            {UOM_LABELS[uom]} · Target: {isTimeline ? formatTimelineTarget(goal.target) : (uom === "ZERO" ? "0" : goal.target.toLocaleString())}
           </p>
         </div>
 
+        {/* 3-Button toggle for progress status */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-[#888]">Progress status</label>
-          <select
-            value={progressStatus}
-            onChange={(e) => setProgressStatus(e.target.value)}
-            disabled={!canEdit}
-            className="w-full px-3 py-2 text-sm disabled:text-[#555]"
-          >
-            {PROGRESS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">
+            Progress Status
+          </label>
+          <div className="flex gap-1 bg-[#0d0d0d] border border-[#222222] p-[3px] rounded-lg h-9">
+            {PROGRESS_OPTIONS.map((opt) => {
+              const isSelected = progressStatus === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => setProgressStatus(opt.value)}
+                  className={`flex-1 text-center text-xs font-medium rounded-md transition-all ${
+                    isSelected
+                      ? "bg-[#1e1e1e] border border-[#333333] text-[#f5f5f5]"
+                      : "text-[#555555] hover:text-[#909090] disabled:opacity-40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
+      {/* Live score preview */}
       {liveScore !== null && (
-        <div className="flex items-center gap-2 rounded-lg border border-[#2a2a2a] bg-[#0f0f0f] px-3 py-2">
-          <span className="text-xs text-[#888]">Live score preview</span>
+        <div className="score-preview-box">
+          <span className="text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em]">
+            Live Score Preview
+          </span>
           <ScoreBadge score={liveScore} />
         </div>
       )}
 
+      {/* Manager comment block */}
       {existingCheckIn?.managerComment && (
-        <blockquote className="border-l-[3px] border-[#333] bg-[#0f0f0f] px-3 py-2 text-xs text-[#888]">
-          <p className="mb-1 text-[#f0f0f0]">Manager comment</p>
-          {existingCheckIn.managerComment}
-        </blockquote>
+        <div className="border-l-[3px] border-[#5a4a1a] bg-[#161616] px-4 py-3 rounded-r-lg space-y-1">
+          <p className="text-[11px] font-semibold text-[#c49a2a] uppercase tracking-[0.06em]">Manager Feedback</p>
+          <p className="text-xs text-[#909090] italic leading-relaxed">"{existingCheckIn.managerComment}"</p>
+        </div>
       )}
 
+      {/* Save Button */}
       <button
         onClick={handleSave}
-        disabled={!canEdit || saving || (!actual && !completionDate)}
-        className="btn btn-success w-full"
+        disabled={!canEdit || saving || (actual === "" && !completionDate)}
+        className="btn btn-confirm w-full mt-2"
       >
-        {!canEdit ? "Check-in window closed" : saving ? "Saving..." : existingCheckIn ? "Update check-in" : "Save check-in"}
+        {!canEdit ? "Check-in window closed" : saving ? "Saving..." : existingCheckIn ? "Update Check-in" : "Save Check-in"}
       </button>
     </div>
   );

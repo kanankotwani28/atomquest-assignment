@@ -52,3 +52,19 @@ export const downloadAchievementCSV = async () => {
   link.remove();
   window.URL.revokeObjectURL(url);
 };
+
+// ── SSE / Polling completion stream ───────────────────────────────
+export const startCompletionStream = (onMessage) => {
+  const interval = setInterval(async () => {
+    try {
+      const res = await getCompletionDashboard();
+      onMessage({ data: res.data });
+    } catch (e) {
+      console.error("Polling error in completion stream:", e);
+    }
+  }, 5000);
+  
+  return {
+    close: () => clearInterval(interval)
+  };
+};

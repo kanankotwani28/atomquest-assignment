@@ -39,7 +39,7 @@ export default function EmployeeCheckIns() {
     );
   }
 
-  const subtitle = `${allowCheckinOutsideWindow ? "Dev mode: check-ins allowed outside windows" : currentQuarter ? `${currentQuarter} window is open` : "No active check-in window"}${cycle ? ` · ${cycle.year}` : ""}`;
+  const subtitle = `${allowCheckinOutsideWindow ? "Dev Mode: check-ins allowed outside window" : currentQuarter ? `${currentQuarter} window is open` : "No active check-in window"}${cycle ? ` · ${cycle.year}` : ""}`;
 
   return (
     <AppShell user={user} logout={logout} title="Quarterly Check-ins" subtitle={subtitle}>
@@ -47,19 +47,18 @@ export default function EmployeeCheckIns() {
 
       <div className="space-y-6">
         {!currentQuarter && !allowCheckinOutsideWindow && (
-          <div className="aq-card border-[#8a6a2a] px-5 py-4">
-            <p className="text-sm text-[#c09a4a]">Check-in window is currently closed.</p>
-            <p className="mt-1 text-xs text-[#888]">
-              Q1 opens in July · Q2 in October · Q3 in January · Q4 / Annual in March-April
-            </p>
+          <div className="notice-bar amber">
+            Check-in window is currently closed. Q1 opens in July · Q2 in October · Q3 in January · Q4 / Annual in March-April
           </div>
         )}
 
         {goals.length === 0 ? (
           <div className="aq-card py-20 text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#2a2a2a]" />
-            <h3 className="mb-2 font-medium text-[#888]">No approved goals yet</h3>
-            <p className="text-sm text-[#555]">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#222222] bg-[#0d0d0d] flex items-center justify-center text-[#555555]">
+              !
+            </div>
+            <h3 className="mb-2 font-medium text-[#909090]">No approved goals yet</h3>
+            <p className="text-sm text-[#555555]">
               Check-ins are available once your manager approves your goals.
             </p>
           </div>

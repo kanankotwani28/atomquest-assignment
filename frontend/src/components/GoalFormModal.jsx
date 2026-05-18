@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { X } from "lucide-react";
 
 const goalSchema = z
   .object({
@@ -34,8 +35,8 @@ const sharedGoalSchema = z.object({
 });
 
 const UOM_OPTIONS = [
-  { value: "NUMERIC_MIN", label: "Numeric", description: "Higher is better, such as revenue or volume." },
-  { value: "NUMERIC_MAX", label: "Numeric", description: "Lower is better, such as turnaround time or cost." },
+  { value: "NUMERIC_MIN", label: "Numeric (higher is better)", description: "Higher is better, such as revenue or volume." },
+  { value: "NUMERIC_MAX", label: "Numeric (lower is better)", description: "Lower is better, such as turnaround time or cost." },
   { value: "TIMELINE", label: "Timeline", description: "Date-based completion against a deadline." },
   { value: "ZERO", label: "Zero-based", description: "Target stays at 0; any non-zero actual scores 0%." },
 ];
@@ -87,7 +88,7 @@ export default function GoalFormModal({
   }, [existingGoal, reset]);
 
   const watchedUom = watch("uom_type");
-  const watchedWeightage = Number(watch("weightage") || 0);
+  const watchedWeightage = watch("weightage") ? Number(watch("weightage")) : 0;
   const selectedUom = UOM_OPTIONS.find((opt) => opt.value === watchedUom);
   const used = Math.min(watchedWeightage, 100);
   const isExact = watchedWeightage === remainingWeightage;
@@ -107,74 +108,127 @@ export default function GoalFormModal({
   return (
     <div className="modal-backdrop">
       <div className="modal-panel">
-        <div className="flex items-center justify-between border-b border-[#2a2a2a] p-6">
-          <h2 className="text-lg font-medium tracking-[0.01em]">
+        
+        {/* Header */}
+        <div className="modal-header">
+          <h2 className="modal-title">
             {weightageOnly ? "Adjust Weightage" : isEditing ? "Edit Goal" : "Add Goal"}
           </h2>
-          <button onClick={onClose} className="btn h-8 min-h-0 w-8 p-0" aria-label="Close">
-            x
+          <button 
+            onClick={onClose} 
+            className="btn-ghost text-[#555] hover:text-[#999] transition-colors p-1"
+            aria-label="Close"
+          >
+            <X size={15} strokeWidth={1.5} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-6">
-          <Field label="Goal title" error={errors.title?.message} required>
-            <input {...register("title")} readOnly={weightageOnly} className="w-full px-4 py-2.5 text-sm read-only:text-[#555]" placeholder="e.g. Achieve quarterly sales target" />
-          </Field>
-
-          <Field label="Description">
-            <textarea {...register("description")} rows={2} readOnly={weightageOnly} className="w-full resize-none px-4 py-2.5 text-sm read-only:text-[#555]" placeholder="Optional details about this goal" />
-          </Field>
-
-          <Field label="Thrust area" error={errors.thrust_area_id?.message} required>
-            <select {...register("thrust_area_id")} disabled={weightageOnly} className="w-full px-4 py-2.5 text-sm disabled:text-[#555]">
-              <option value="">Select thrust area...</option>
-              {thrustAreas.map((ta) => (
-                <option key={ta.id} value={ta.id}>{ta.name}</option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Unit of measurement" error={errors.uom_type?.message} required>
-            <select {...register("uom_type")} disabled={weightageOnly} className="w-full px-4 py-2.5 text-sm disabled:text-[#555]">
-              <option value="">Select UoM type...</option>
-              {UOM_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            {selectedUom && (
-              <p className="mt-2 rounded-lg border border-[#333] bg-[#1a1a1a] px-3 py-2 text-xs text-[#888]">
-                {selectedUom.description}
-              </p>
-            )}
-          </Field>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Target" error={errors.target?.message} required>
-              <input {...register("target")} type="number" step="any" readOnly={weightageOnly} className="w-full px-4 py-2.5 text-sm read-only:text-[#555]" placeholder={watchedUom === "ZERO" ? "0" : "e.g. 1000000"} />
-            </Field>
-
-            <Field label="Weightage (%)" error={errors.weightage?.message} required>
-              <input {...register("weightage")} type="number" min="10" max="100" className="w-full px-4 py-2.5 text-sm" placeholder={`max ${remainingWeightage}%`} />
-              <p className="mt-1 text-xs text-[#555]">{remainingWeightage}% remaining</p>
-            </Field>
-          </div>
-
-          <div>
-            <div className="progress-track">
-              <div
-                className={`progress-fill ${isOver ? "fill-danger" : isExact ? "fill-success" : "fill-accent"}`}
-                style={{ width: `${used}%` }}
+        {/* Form Body and Footer */}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+            <Field label="Goal title" error={errors.title?.message} required>
+              <input 
+                {...register("title")} 
+                readOnly={weightageOnly} 
+                className="aq-input w-full" 
+                placeholder="e.g. Achieve quarterly sales target" 
               />
+            </Field>
+
+            <Field label="Description">
+              <textarea 
+                {...register("description")} 
+                rows={2} 
+                readOnly={weightageOnly} 
+                className="aq-input w-full" 
+                placeholder="Optional details about this goal" 
+              />
+            </Field>
+
+            <Field label="Thrust area" error={errors.thrust_area_id?.message} required>
+              <select 
+                {...register("thrust_area_id")} 
+                disabled={weightageOnly} 
+                className="aq-input w-full"
+              >
+                <option value="">Select thrust area...</option>
+                {thrustAreas.map((ta) => (
+                  <option key={ta.id} value={ta.id}>{ta.name}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Unit of measurement" error={errors.uom_type?.message} required>
+              <select 
+                {...register("uom_type")} 
+                disabled={weightageOnly} 
+                className="aq-input w-full"
+              >
+                <option value="">Select UoM type...</option>
+                {UOM_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              {selectedUom && (
+                <p className="mt-2 rounded border border-[#222222] bg-[#161616] px-3 py-2 text-xs text-[#555555]">
+                  {selectedUom.description}
+                </p>
+              )}
+            </Field>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Target" error={errors.target?.message} required>
+                <input 
+                  {...register("target")} 
+                  type={watchedUom === "TIMELINE" ? "date" : "number"} 
+                  step="any" 
+                  readOnly={weightageOnly} 
+                  className="aq-input w-full" 
+                  placeholder={watchedUom === "ZERO" ? "0" : "e.g. 1000000"} 
+                />
+              </Field>
+
+              <Field label="Weightage (%)" error={errors.weightage?.message} required>
+                <input 
+                  {...register("weightage")} 
+                  type="number" 
+                  min="10" 
+                  max="100" 
+                  className="aq-input w-full" 
+                  placeholder={`max ${remainingWeightage}%`} 
+                />
+                <p className="mt-1 text-[11px] text-[#555555]">{remainingWeightage}% remaining</p>
+              </Field>
             </div>
-            <p className={`mt-2 text-xs ${isOver ? "text-[#c47a7a]" : isExact ? "text-[#7ab88a]" : "text-[#888]"}`}>
-              {watchedWeightage || 0}% selected for this goal
-            </p>
+
+            <div>
+              <div className="progress-track">
+                <div
+                  className={`progress-fill ${isOver ? "poor" : isExact ? "excellent" : "good"}`}
+                  style={{ width: `${used}%` }}
+                />
+              </div>
+              <p className={`mt-2 text-xs ${isOver ? "text-[#c44a4a]" : isExact ? "text-[#4d9966]" : "text-[#909090]"}`}>
+                {watchedWeightage || 0}% selected for this goal
+              </p>
+            </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn flex-1">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="btn btn-success flex-1">
-              {isSubmitting ? "Saving..." : weightageOnly ? "Save weightage" : isEditing ? "Save changes" : "Add goal"}
+          {/* Footer */}
+          <div className="modal-footer">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="btn"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting} 
+              className="btn btn-confirm"
+            >
+              {isSubmitting ? "Saving..." : weightageOnly ? "Save Weightage" : isEditing ? "Save Changes" : "Add Goal"}
             </button>
           </div>
         </form>
@@ -185,12 +239,12 @@ export default function GoalFormModal({
 
 function Field({ label, required, error, children }) {
   return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-[#888]">
-        {label} {required && <span className="text-[#c47a7a]">*</span>}
+    <div className="space-y-1.5">
+      <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em]">
+        {label} {required && <span className="text-[#c44a4a]">*</span>}
       </label>
       {children}
-      {error && <p className="mt-1 text-xs text-[#c47a7a]">{error}</p>}
+      {error && <p className="text-xs text-[#c44a4a] mt-1">{error}</p>}
     </div>
   );
 }

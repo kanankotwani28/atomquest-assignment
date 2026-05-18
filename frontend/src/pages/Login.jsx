@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import toast, { Toaster } from 'react-hot-toast';
+import { Sun, Moon, KeyRound } from 'lucide-react';
 
 const ROLE_REDIRECTS = {
   EMPLOYEE: '/employee/dashboard',
@@ -9,8 +11,20 @@ const ROLE_REDIRECTS = {
   ADMIN: '/admin/dashboard',
 };
 
+const AtombergLogo = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-10 w-10 text-[var(--success-text)] transition-transform duration-300 hover:rotate-45">
+    {/* Atomic Nucleus */}
+    <circle cx="12" cy="12" r="2.5" fill="currentColor" className="text-[var(--success-text)]" />
+    {/* Orbital paths */}
+    <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(30 12 12)" stroke="currentColor" strokeWidth="1.2" className="opacity-80" />
+    <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(150 12 12)" stroke="currentColor" strokeWidth="1.2" className="opacity-80" />
+    <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(90 12 12)" stroke="currentColor" strokeWidth="1.2" className="opacity-40" />
+  </svg>
+);
+
 export default function Login() {
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -21,7 +35,6 @@ export default function Login() {
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name}!`);
-      // Redirect based on role — each role sees their own dashboard
       navigate(ROLE_REDIRECTS[user.role] || '/');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Login failed');
@@ -31,21 +44,36 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Toaster position="top-right" />
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-md p-8">
+    <div className="min-h-screen bg-[var(--bg-root)] flex items-center justify-center p-4 relative transition-colors duration-200">
+      <Toaster position="top-right" toastOptions={{ className: 'toast-dark' }} />
+      
+      {/* Floating Theme Selector top-right */}
+      <div className="absolute top-6 right-6">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-150 flex items-center justify-center cursor-pointer"
+          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+          {theme === 'light' ? <Moon size={16} strokeWidth={1.8} /> : <Sun size={16} strokeWidth={1.8} />}
+        </button>
+      </div>
+
+      {/* Login Card Panel */}
+      <div className="aq-card w-full max-w-md p-8 transition-transform duration-200">
         {/* Header */}
         <div className="mb-8">
-          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-4">
-            <span className="text-white font-bold text-xl">A</span>
+          <div className="mb-4 flex items-center justify-start">
+            <AtombergLogo />
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900">AtomQuest</h1>
-          <p className="text-gray-500 mt-1">Goal Setting & Tracking Portal</p>
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)] tracking-tight">Atomberg</h1>
+          <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-semibold mt-1.5">
+            Goal Setting & Tracking Portal
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
               Email address
             </label>
             <input
@@ -53,14 +81,13 @@ export default function Login() {
               required
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="aq-input w-full px-4 py-2.5 focus:outline-none"
               placeholder="you@company.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
               Password
             </label>
             <input
@@ -68,8 +95,7 @@ export default function Login() {
               required
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="aq-input w-full px-4 py-2.5 focus:outline-none"
               placeholder="••••••••"
             />
           </div>
@@ -77,22 +103,37 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium
-                       hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-colors"
+            className="w-full btn-confirm py-2.5 cursor-pointer disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         {/* Quick-login hint for demo/hackathon judges */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-xs font-medium text-gray-600 mb-2">Demo credentials</p>
-          <div className="space-y-1 text-xs text-gray-500">
-            <p>Employee: employee@atomquest.com</p>
-            <p>Manager: manager@atomquest.com</p>
-            <p>Admin: admin@atomquest.com</p>
-            <p className="text-gray-400 mt-1">Password: password123</p>
+        <div className="mt-8 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]">
+          <div className="flex items-center gap-2 mb-3">
+            <KeyRound size={13} className="text-[var(--text-muted)]" />
+            <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+              Demo credentials
+            </span>
+          </div>
+          <div className="space-y-1.5 text-xs text-[var(--text-secondary)] mono">
+            <div className="flex justify-between">
+              <span>Employee:</span>
+              <span className="text-[var(--text-primary)]">employee@atomquest.com</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Manager:</span>
+              <span className="text-[var(--text-primary)]">manager@atomquest.com</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Admin:</span>
+              <span className="text-[var(--text-primary)]">admin@atomquest.com</span>
+            </div>
+            <div className="pt-1.5 border-t border-[var(--border)] mt-1.5 flex justify-between text-[var(--text-muted)]">
+              <span>Password:</span>
+              <span className="text-[var(--text-primary)] font-medium">password123</span>
+            </div>
           </div>
         </div>
       </div>

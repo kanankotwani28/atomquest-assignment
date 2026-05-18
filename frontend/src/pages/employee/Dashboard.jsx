@@ -85,7 +85,7 @@ export default function EmployeeDashboard() {
   };
 
   const handleSubmitAll = async () => {
-    if (!confirm("Submit all draft goals for manager approval? You cannot edit them after submission.")) return;
+    if (!confirm("Submit all goals for manager approval? You cannot edit them after submission.")) return;
     try {
       const res = await submitAllGoals();
       toast.success(res.data.message);
@@ -108,25 +108,25 @@ export default function EmployeeDashboard() {
       user={user}
       logout={logout}
       title="My Goals"
-      subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active cycle"}
+      subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}
     >
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
       <div className="space-y-6">
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="aq-card stat-card">
-            <p className="label-caps">Goals Created</p>
-            <p className="stat-value mt-3">{goals.length}</p>
+            <span className="label">Goals Created</span>
+            <span className="number-large mt-3">{goals.length}</span>
           </div>
-          <div className="aq-card stat-card flex items-center justify-between">
+          <div className="aq-card stat-card flex flex-row items-center justify-between">
             <div>
-              <p className="label-caps">Total Weightage</p>
-              <p className="mono mt-3 text-xl text-[#f0f0f0]">{totalWeightage.toFixed(1)}%</p>
+              <span className="label">Total Weightage</span>
+              <span className="number-large mt-3 block">{totalWeightage.toFixed(1)}%</span>
             </div>
             <WeightRing value={totalWeightage} />
           </div>
           <div className="aq-card stat-card">
-            <p className="label-caps">Goals Status</p>
+            <span className="label">Goals Status</span>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="status-badge status-submitted">{submittedCount} submitted</span>
               <span className="status-badge status-approved">{approvedCount} approved</span>
@@ -138,22 +138,19 @@ export default function EmployeeDashboard() {
         <WeightageBar goals={goals} />
 
         {allApproved && (
-          <div className="aq-card border-[#4a7c59] px-5 py-4">
-            <p className="text-sm text-[#7ab88a]">All goals approved by your manager</p>
+          <div className="notice-bar green">
+            All goals approved by your manager
           </div>
         )}
 
         {goals.some((g) => g.status === "REVISION_REQUIRED") && (
-          <div className="aq-card border-[#8a6a2a] px-5 py-4">
-            <p className="text-sm text-[#c09a4a]">Revision required after shared KPI assignment</p>
-            <p className="mt-1 text-xs text-[#888]">
-              Rebalance weightages so the sheet totals 100%, then submit for manager re-approval.
-            </p>
+          <div className="notice-bar amber">
+            Revision required after shared KPI assignment. Rebalance weightages so the sheet totals 100%, then submit for manager re-approval.
           </div>
         )}
 
         <div className="flex items-center justify-between">
-          <h2 className="label">
+          <h2 className="label text-[#909090]">
             {goals.length} goal{goals.length !== 1 ? "s" : ""} · {cycle?.year}
           </h2>
           <div className="flex gap-3">
@@ -169,7 +166,7 @@ export default function EmployeeDashboard() {
               </button>
             )}
             {canSubmit && (
-              <button onClick={handleSubmitAll} className="btn btn-success">
+              <button onClick={handleSubmitAll} className="btn btn-confirm">
                 Submit for Approval
               </button>
             )}
@@ -178,9 +175,11 @@ export default function EmployeeDashboard() {
 
         {goals.length === 0 ? (
           <div className="aq-card py-20 text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#2a2a2a]" />
-            <h3 className="mb-2 font-medium text-[#888]">No goals yet</h3>
-            <p className="mb-6 text-sm text-[#555]">Start by adding your first goal for this cycle.</p>
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#222222] bg-[#0d0d0d] flex items-center justify-center text-[#555555]">
+              !
+            </div>
+            <h3 className="mb-2 font-medium text-[#909090]">No goals yet</h3>
+            <p className="mb-6 text-sm text-[#555555]">Start by adding your first goal for this cycle.</p>
             <button
               onClick={() => {
                 setEditingGoal(null);
@@ -208,7 +207,7 @@ export default function EmployeeDashboard() {
         )}
 
         {hasEditableGoals && Math.round(totalWeightage) !== 100 && goals.length > 0 && (
-          <p className="text-center text-xs text-[#555]">
+          <p className="text-center micro text-[#555555]">
             Total weightage must equal 100% before you can submit. Currently at {totalWeightage.toFixed(1)}%.
           </p>
         )}
@@ -236,22 +235,22 @@ function WeightRing({ value }) {
   const offset = circumference - (pct / 100) * circumference;
 
   return (
-    <div className="relative h-20 w-20">
+    <div className="relative h-20 w-20 flex-shrink-0">
       <svg viewBox="0 0 72 72" className="h-20 w-20 -rotate-90">
-        <circle cx="36" cy="36" r={radius} fill="none" stroke="#2a2a2a" strokeWidth="6" />
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="#222222" strokeWidth="4" />
         <circle
           cx="36"
           cy="36"
           r={radius}
           fill="none"
           stroke="#e8e8e8"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
         />
       </svg>
-      <div className="mono absolute inset-0 grid place-items-center text-xs text-[#f0f0f0]">{pct.toFixed(0)}%</div>
+      <div className="mono absolute inset-0 grid place-items-center text-xs text-[#f5f5f5]">{pct.toFixed(0)}%</div>
     </div>
   );
 }

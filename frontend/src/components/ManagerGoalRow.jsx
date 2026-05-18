@@ -9,88 +9,98 @@ const UOM_LABELS = {
   ZERO: "Zero = Success",
 };
 
-const statusClass = (status) => `status-${String(status || "DRAFT").toLowerCase().replaceAll("_", "-")}`;
+const statusClass = (status) => `status-badge ${String(status || "DRAFT").toLowerCase().replaceAll("_", "-")}`;
 
 export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
-  const [editing, setEditing] = useState(false);
-  const [fields, setFields] = useState({ target: goal.target, weightage: goal.weightage });
+  const [fields, setFields] = useState({
+    target: goal.target,
+    weightage: goal.weightage
+  });
   const [saving, setSaving] = useState(false);
   const canEdit = goal.status === "SUBMITTED";
 
-  const saveEdit = async () => {
+  const saveEdit = async (updatedFields) => {
     setSaving(true);
     try {
-      await managerEditGoal(goal.id, fields);
+      await managerEditGoal(goal.id || goal._id, updatedFields);
       toast.success("Goal updated");
-      setEditing(false);
       onUpdated();
     } catch (err) {
       toast.error(err.response?.data?.error || "Update failed");
+      // Reset fields on error
+      setFields({ target: goal.target, weightage: goal.weightage });
     } finally {
       setSaving(false);
     }
   };
 
+  const handleBlurTarget = async (e) => {
+    const val = parseFloat(e.target.value);
+    if (isNaN(val) || val === goal.target) return;
+    const newFields = { ...fields, target: val };
+    setFields(newFields);
+    await saveEdit(newFields);
+  };
+
+  const handleBlurWeightage = async (e) => {
+    const val = parseFloat(e.target.value);
+    if (isNaN(val) || val < 10 || val > 100 || val === goal.weightage) {
+      if (val < 10 || val > 100) {
+        toast.error("Weightage must be between 10% and 100%");
+      }
+      setFields({ ...fields, weightage: goal.weightage });
+      return;
+    }
+    const newFields = { ...fields, weightage: val };
+    setFields(newFields);
+    await saveEdit(newFields);
+  };
+
   return (
-    <tr>
-      <td className="text-[#f0f0f0]">{goal.title}</td>
-      <td>{goal.thrustArea?.name}</td>
-      <td className="mono text-xs">{UOM_LABELS[goal.uomType]}</td>
-      <td>
-        {editing ? (
+    <tr className="hover:bg-[#161616]/50 transition-colors">
+      <td className="text-[#f5f5f5] font-medium text-xs max-w-[200px] truncate py-3">{goal.title}</td>
+      <td className="text-xs text-[#909090] py-3">{goal.thrustArea?.name || goal.thrust_area?.name}</td>
+      <td className="mono text-xs text-[#909090] py-3">{UOM_LABELS[goal.uomType || goal.uom_type]}</td>
+      <td className="py-3">
+        {canEdit ? (
           <input
             type="number"
-            value={fields.target}
-            onChange={(e) => setFields({ ...fields, target: e.target.value })}
-            className="w-28 px-2 py-1 text-xs"
+            step="any"
+            defaultValue={goal.target}
+            onBlur={handleBlurTarget}
+            disabled={saving}
+            className="w-24 px-1.5 py-0.5 bg-transparent border border-transparent hover:border-[#222222] focus:border-[#404040] focus:bg-[#0a0a0a] rounded text-xs mono text-[#e8e8e8] transition-all focus:outline-none"
           />
         ) : (
-          <span className="mono text-xs">{goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}</span>
+          <span className="mono text-xs text-[#e8e8e8]">{goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}</span>
         )}
       </td>
-      <td>
-        {editing ? (
+      <td className="py-3">
+        {canEdit ? (
           <input
             type="number"
             min="10"
             max="100"
-            value={fields.weightage}
-            onChange={(e) => setFields({ ...fields, weightage: e.target.value })}
-            className="w-20 px-2 py-1 text-xs"
+            defaultValue={goal.weightage}
+            onBlur={handleBlurWeightage}
+            disabled={saving}
+            className="w-16 px-1.5 py-0.5 bg-transparent border border-transparent hover:border-[#222222] focus:border-[#404040] focus:bg-[#0a0a0a] rounded text-xs mono text-[#e8e8e8] transition-all focus:outline-none"
           />
         ) : (
-          <span className="mono text-xs">{goal.weightage}%</span>
+          <span className="mono text-xs text-[#e8e8e8]">{goal.weightage}%</span>
         )}
       </td>
-      <td>
-        <span className={`status-badge ${statusClass(goal.status)}`}>{goal.status}</span>
+      <td className="py-3">
+        <span className={statusClass(goal.status)}>{goal.status}</span>
       </td>
-      <td className="text-right">
-        {canEdit && !editing && (
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setEditing(true)} className="text-xs text-[#888] hover:text-[#f0f0f0]">
-              Edit
-            </button>
-            <button onClick={() => onReturn(goal)} className="btn-text-danger text-xs">
-              Return
-            </button>
-          </div>
-        )}
-        {editing && (
-          <div className="flex justify-end gap-2">
-            <button onClick={saveEdit} disabled={saving} className="btn btn-success min-h-0 px-3 py-1 text-xs">
-              {saving ? "Saving" : "Save"}
-            </button>
-            <button
-              onClick={() => {
-                setEditing(false);
-                setFields({ target: goal.target, weightage: goal.weightage });
-              }}
-              className="btn min-h-0 px-3 py-1 text-xs"
-            >
-              Cancel
-            </button>
-          </div>
+      <td className="text-right py-3 pr-4">
+        {canEdit && (
+          <button
+            onClick={() => onReturn(goal)}
+            className="text-xs font-medium text-[#c44a4a] hover:text-[#e55a5a] transition-colors"
+          >
+            Return
+          </button>
         )}
       </td>
     </tr>

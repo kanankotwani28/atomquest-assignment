@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
+import AppShell from "../../components/AppShell";
+import ScoreBadge from "../../components/ScoreBadge";
 import {
   activateCycle,
   createCycle,
@@ -15,6 +17,7 @@ import {
   pushSharedGoal,
   unlockGoal,
   updateUserManager,
+  startCompletionStream,
 } from "../../api/admin";
 
 const UOM_OPTIONS = [
@@ -52,6 +55,8 @@ export default function AdminDashboard() {
   const [thrustAreas, setThrustAreas] = useState([]);
   const [sharedGoal, setSharedGoal] = useState(initialSharedGoal);
   const [cycleForm, setCycleForm] = useState(initialCycle);
+
+  const [activeTab, setActiveTab] = useState("overview");
 
   const employees = users.filter((u) => u.role === "EMPLOYEE");
   const managers = users.filter((u) => u.role === "MANAGER");
@@ -197,421 +202,488 @@ export default function AdminDashboard() {
     }
   };
 
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "cycles", label: "Cycles" },
+    { id: "shared_goals", label: "Shared Goals" },
+    { id: "completion", label: "Completion" },
+    { id: "audit", label: "Audit Trail" },
+    { id: "goals", label: "Goal Unlock" },
+    { id: "users", label: "Hierarchy" },
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">Loading admin panel...</p>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="skeleton h-4 w-44 rounded" />
       </div>
     );
   }
 
+  const activeCycleName = cycles.find(c => c.is_active)?.year || "No active cycle";
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
+    <AppShell
+      user={user}
+      logout={logout}
+      title="Admin Panel"
+      subtitle={`Active Year: ${activeCycleName}`}
+    >
+      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Cycles, shared goals, audit trail, exports, and completion
-              oversight
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">{user.name}</span>
+      <div className="space-y-6">
+        {/* Horizontal Navigation Tabs */}
+        <div className="quarter-tabs-row overflow-x-auto flex-nowrap scrollbar-thin">
+          {tabs.map((tab) => (
             <button
-              onClick={handleDownload}
-              className="text-xs px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`quarter-tab min-w-[90px] text-center ${activeTab === tab.id ? "active" : ""}`}
             >
-              Export Excel
+              {tab.label}
             </button>
-            <button
-              onClick={handleDownloadCSV}
-              className="text-xs px-3 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-            >
-              Export CSV
-            </button>
-            <button
-              onClick={logout}
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              Sign out
-            </button>
-          </div>
+          ))}
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        <section className="grid grid-cols-4 gap-4">
-          <StatCard label="Employees" value={stats.total} />
-          <StatCard label="Submitted" value={stats.submitted} />
-          <StatCard label="Approved" value={stats.approved} />
-          <StatCard label="Q1 check-ins" value={stats.q1} />
-        </section>
+        {/* Tab 1: Overview (2x3 Grid) */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="label text-[#909090]">Admin Overview</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDownloadCSV}
+                  className="btn text-xs py-1"
+                >
+                  Export CSV
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="btn btn-confirm text-xs py-1"
+                >
+                  Export Excel
+                </button>
+              </div>
+            </div>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel title="Cycle Management">
-            <div className="space-y-3 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="aq-card stat-card">
+                <span className="label">Total Employees</span>
+                <span className="number-large mt-3 block">{stats.total}</span>
+              </div>
+              <div className="aq-card stat-card">
+                <span className="label">Sheets Submitted</span>
+                <span className="number-large mt-3 block text-[#c49a2a]">{stats.submitted}</span>
+              </div>
+              <div className="aq-card stat-card">
+                <span className="label">Sheets Approved</span>
+                <span className="number-large mt-3 block text-[#4d9966]">{stats.approved}</span>
+              </div>
+              <div className="aq-card stat-card">
+                <span className="label">Q1 Submissions</span>
+                <span className="number-large mt-3 block text-[#4a7ac4]">{stats.q1}</span>
+              </div>
+              <div className="aq-card stat-card">
+                <span className="label">Active Cycle</span>
+                <span className="number-large mt-3 block text-[#e8e8e8]">{activeCycleName}</span>
+              </div>
+              <div className="aq-card stat-card">
+                <span className="label">Total System Goals</span>
+                <span className="number-large mt-3 block text-[#909090]">{goals.length}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Cycles Management */}
+        {activeTab === "cycles" && (
+          <div className="space-y-6">
+            <div className="space-y-4">
               {cycles.map((cycle) => (
                 <div
                   key={cycle.id}
-                  className="flex items-center justify-between border border-gray-200 rounded-lg p-3"
+                  className={`aq-card relative pl-6 pr-5 py-4 border border-[#222222] ${
+                    cycle.is_active ? "border-l-[3px] border-l-[#4d9966]" : ""
+                  }`}
                 >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {cycle.year} · {cycle.phase}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(cycle.start_date).toLocaleDateString()} to{" "}
-                      {new Date(cycle.end_date).toLocaleDateString()}
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="mono text-base font-semibold text-[#f5f5f5]">{cycle.year}</span>
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-[#909090] ml-3 bg-[#161616] border border-[#222222] px-2 py-0.5 rounded">
+                        {cycle.phase}
+                      </span>
+                      <p className="micro text-[#555555] mt-1.5">
+                        Window: {new Date(cycle.start_date).toLocaleDateString()} to {new Date(cycle.end_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {cycle.is_active ? (
+                      <span className="status-badge status-approved">Active</span>
+                    ) : (
+                      <button
+                        onClick={() => handleActivateCycle(cycle.id)}
+                        className="btn text-xs py-1"
+                      >
+                        Activate
+                      </button>
+                    )}
                   </div>
-                  {cycle.is_active ? (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-                      Active
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleActivateCycle(cycle.id)}
-                      className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      Activate
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
 
-            <form
-              onSubmit={handleCreateCycle}
-              className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4"
-            >
-              <input
-                type="number"
-                value={cycleForm.year}
-                onChange={(e) =>
-                  setCycleForm({ ...cycleForm, year: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="Year"
-              />
-              <input
-                value={cycleForm.phase}
-                onChange={(e) =>
-                  setCycleForm({ ...cycleForm, phase: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="Phase"
-              />
-              <input
-                type="date"
-                value={cycleForm.start_date}
-                onChange={(e) =>
-                  setCycleForm({ ...cycleForm, start_date: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <input
-                type="date"
-                value={cycleForm.end_date}
-                onChange={(e) =>
-                  setCycleForm({ ...cycleForm, end_date: e.target.value })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <label className="flex items-center gap-2 text-xs text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={cycleForm.is_active}
-                  onChange={(e) =>
-                    setCycleForm({ ...cycleForm, is_active: e.target.checked })
-                  }
-                />
-                Make active
-              </label>
-              <button className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
-                Create cycle
-              </button>
+            <form onSubmit={handleCreateCycle} className="aq-card p-5 space-y-4">
+              <h3 className="text-xs font-semibold text-[#f5f5f5] uppercase tracking-[0.06em]">Create New Cycle</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Year</label>
+                  <input
+                    type="number"
+                    value={cycleForm.year}
+                    onChange={(e) => setCycleForm({ ...cycleForm, year: e.target.value })}
+                    className="aq-input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Phase Name</label>
+                  <input
+                    value={cycleForm.phase}
+                    onChange={(e) => setCycleForm({ ...cycleForm, phase: e.target.value })}
+                    className="aq-input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Start Date</label>
+                  <input
+                    type="date"
+                    value={cycleForm.start_date}
+                    onChange={(e) => setCycleForm({ ...cycleForm, start_date: e.target.value })}
+                    className="aq-input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">End Date</label>
+                  <input
+                    type="date"
+                    value={cycleForm.end_date}
+                    onChange={(e) => setCycleForm({ ...cycleForm, end_date: e.target.value })}
+                    className="aq-input w-full"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center gap-2 text-xs text-[#909090] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={cycleForm.is_active}
+                    onChange={(e) => setCycleForm({ ...cycleForm, is_active: e.target.checked })}
+                  />
+                  Automatically activate this cycle
+                </label>
+                <button className="btn btn-confirm">Create Cycle</button>
+              </div>
             </form>
-          </Panel>
+          </div>
+        )}
 
-          <Panel title="Shared Goal Push">
-            <form onSubmit={handlePushSharedGoal} className="space-y-3">
-              <input
-                value={sharedGoal.title}
-                onChange={(e) =>
-                  setSharedGoal({ ...sharedGoal, title: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="Shared goal title"
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  value={sharedGoal.thrust_area_id}
-                  onChange={(e) =>
-                    setSharedGoal({
-                      ...sharedGoal,
-                      thrust_area_id: e.target.value,
-                    })
-                  }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                  required
-                >
-                  <option value="">Thrust area</option>
-                  {thrustAreas.map((area) => (
-                    <option key={area.id} value={area.id}>
-                      {area.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={sharedGoal.uom_type}
-                  onChange={(e) =>
-                    setSharedGoal({ ...sharedGoal, uom_type: e.target.value })
-                  }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                >
-                  {UOM_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+        {/* Tab 3: Shared Goal Push */}
+        {activeTab === "shared_goals" && (
+          <form onSubmit={handlePushSharedGoal} className="aq-card p-5 space-y-4">
+            <h3 className="text-xs font-semibold text-[#f5f5f5] uppercase tracking-[0.06em]">Departmental KPI Push</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">KPI Title</label>
                 <input
-                  type="number"
-                  step="any"
-                  value={sharedGoal.target}
-                  onChange={(e) =>
-                    setSharedGoal({ ...sharedGoal, target: e.target.value })
-                  }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  placeholder="Target"
-                  required
-                />
-                <input
-                  type="number"
-                  min="10"
-                  max="100"
-                  value={sharedGoal.weightage}
-                  onChange={(e) =>
-                    setSharedGoal({ ...sharedGoal, weightage: e.target.value })
-                  }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  placeholder="Weightage"
+                  value={sharedGoal.title}
+                  onChange={(e) => setSharedGoal({ ...sharedGoal, title: e.target.value })}
+                  className="aq-input w-full"
+                  placeholder="Enter shared KPI title"
                   required
                 />
               </div>
-
-              <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
-                {employees.map((employee) => (
-                  <label
-                    key={employee.id}
-                    className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 last:border-b-0 text-sm"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Thrust Area</label>
+                  <select
+                    value={sharedGoal.thrust_area_id}
+                    onChange={(e) => setSharedGoal({ ...sharedGoal, thrust_area_id: e.target.value })}
+                    className="aq-input w-full"
+                    required
                   >
-                    <input
-                      type="checkbox"
-                      checked={sharedGoal.employee_ids.includes(employee.id)}
-                      onChange={() => toggleRecipient(employee.id)}
-                    />
-                    <span>{employee.name}</span>
-                    <span className="text-xs text-gray-400 ml-auto">
-                      {employee.department}
-                    </span>
-                  </label>
-                ))}
+                    <option value="">Select thrust area...</option>
+                    {thrustAreas.map((area) => (
+                      <option key={area.id} value={area.id}>{area.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Unit of Measurement</label>
+                  <select
+                    value={sharedGoal.uom_type}
+                    onChange={(e) => setSharedGoal({ ...sharedGoal, uom_type: e.target.value })}
+                    className="aq-input w-full"
+                  >
+                    {UOM_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Target</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={sharedGoal.target}
+                    onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })}
+                    className="aq-input w-full"
+                    placeholder="Target"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Weightage (%)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={sharedGoal.weightage}
+                    onChange={(e) => setSharedGoal({ ...sharedGoal, weightage: e.target.value })}
+                    className="aq-input w-full"
+                    placeholder="Weightage"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">Select Recipients</label>
+                <div className="border border-[#222222] bg-[#0d0d0d] rounded-lg max-h-52 overflow-y-auto divide-y divide-[#161616]">
+                  {employees.map((employee) => (
+                    <label
+                      key={employee.id}
+                      className="flex items-center gap-3 px-4 py-2.5 text-xs text-[#909090] cursor-pointer hover:bg-[#111111] transition-colors animate-pulse-subtle"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={sharedGoal.employee_ids.includes(employee.id)}
+                        onChange={() => toggleRecipient(employee.id)}
+                      />
+                      <span className="text-[#f5f5f5] font-medium">{employee.name}</span>
+                      <span className="micro text-[#555555] ml-auto">{employee.department || "General"}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <button
                 disabled={sharedGoal.employee_ids.length === 0}
-                className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-40"
+                className="btn btn-confirm w-full mt-2"
               >
                 Push to {sharedGoal.employee_ids.length || 0} employee(s)
               </button>
-            </form>
-          </Panel>
-        </section>
+            </div>
+          </form>
+        )}
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel title="Completion Dashboard">
+        {/* Tab 4: Completion Dashboard */}
+        {activeTab === "completion" && (
+          <div className="aq-card p-0 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="aq-table w-full">
                 <thead>
-                  <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                    <th className="py-2">Employee</th>
-                    <th>Dept</th>
-                    <th>Goals</th>
-                    <th>Check-ins</th>
+                  <tr>
+                    <th className="text-left font-semibold">Employee</th>
+                    <th className="text-left font-semibold">Department</th>
+                    <th className="text-left font-semibold">Goals Submission</th>
+                    <th className="text-left font-semibold">Check-ins Completed</th>
                   </tr>
                 </thead>
                 <tbody>
                   {completion.map((row) => (
-                    <tr key={row.employee} className="border-b border-gray-50">
-                      <td className="py-2 text-gray-900">{row.employee}</td>
-                      <td className="text-gray-500">{row.department}</td>
-                      <td>
-                        <StatusPill
-                          active={row.goalsApproved}
-                          label={
+                    <tr key={row.employee} className="hover:bg-[#161616]/30 transition-colors">
+                      <td className="text-[#f5f5f5] font-medium py-3">{row.employee}</td>
+                      <td className="text-[#909090] py-3">{row.department}</td>
+                      <td className="py-3">
+                        <span
+                          className={`status-badge ${
                             row.goalsApproved
-                              ? "Approved"
+                              ? "status-approved"
                               : row.goalsSubmitted
-                                ? "Submitted"
-                                : "Open"
-                          }
-                        />
+                              ? "status-submitted"
+                              : "status-draft"
+                          }`}
+                        >
+                          {row.goalsApproved ? "APPROVED" : row.goalsSubmitted ? "SUBMITTED" : "DRAFT"}
+                        </span>
                       </td>
-                      <td className="text-gray-500">
-                        {row.checkInsCompleted?.join(", ") || "None"}
+                      <td className="py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {row.checkInsCompleted?.length > 0 ? (
+                            row.checkInsCompleted.map((q) => (
+                              <span key={q} className="score-badge excellent text-[10px] px-1.5 py-0.5">
+                                {q}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[#555555] italic text-xs">None</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </Panel>
+          </div>
+        )}
 
-          <Panel title="Org Hierarchy">
-            <div className="space-y-3">
-              {employees.map((employee) => (
-                <div
-                  key={employee.id}
-                  className="grid grid-cols-[1fr_180px] gap-3 items-center"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {employee.name}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {employee.email} · {employee.department}
-                    </p>
-                  </div>
-                  <select
-                    value={employee.manager_id || ""}
-                    onChange={(e) =>
-                      handleManagerChange(employee.id, e.target.value)
-                    }
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                  >
-                    <option value="">No manager</option>
-                    {managers.map((manager) => (
-                      <option key={manager.id} value={manager.id}>
-                        {manager.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+        {/* Tab 5: Goal Unlock */}
+        {activeTab === "goals" && (
+          <div className="space-y-4">
+            <div className="notice-bar amber">
+              WARNING: Unlocking an approved goal will return it to DRAFT state and clear manager locks. Rebalance must be performed manually.
             </div>
-          </Panel>
-        </section>
 
-        <Panel title="Goal Unlock">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                  <th className="py-2">Goal</th>
-                  <th>Owner</th>
-                  <th>Thrust Area</th>
-                  <th>Status</th>
-                  <th>Weight</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {goals.map((goal) => (
-                  <tr key={goal.id} className="border-b border-gray-50">
-                    <td className="py-2 text-gray-900">{goal.title}</td>
-                    <td className="text-gray-500">{goal.owner}</td>
-                    <td className="text-gray-500">{goal.thrustArea}</td>
-                    <td>
-                      <StatusPill
-                        active={goal.status === "APPROVED"}
-                        label={goal.status}
-                      />
-                    </td>
-                    <td className="text-gray-500">{goal.weightage}%</td>
-                    <td className="text-right">
-                      <button
-                        onClick={() => handleUnlockGoal(goal)}
-                        disabled={goal.status !== "APPROVED"}
-                        className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40"
+            <div className="aq-card p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="aq-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left font-semibold">Goal Title</th>
+                      <th className="text-left font-semibold">Owner</th>
+                      <th className="text-left font-semibold">Thrust Area</th>
+                      <th className="text-left font-semibold">Status</th>
+                      <th className="text-left font-semibold">Weight</th>
+                      <th className="w-16" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {goals.map((goal) => (
+                      <tr key={goal.id} className="hover:bg-[#161616]/30 transition-colors">
+                        <td className="text-[#f5f5f5] font-medium py-3 max-w-[200px] truncate">{goal.title}</td>
+                        <td className="text-[#909090] py-3">{goal.owner}</td>
+                        <td className="text-[#909090] py-3">{goal.thrustArea}</td>
+                        <td className="py-3">
+                          <span
+                            className={`status-badge ${
+                              goal.status === "APPROVED" ? "status-approved" : "status-submitted"
+                            }`}
+                          >
+                            {goal.status}
+                          </span>
+                        </td>
+                        <td className="mono text-[#e8e8e8] py-3">{goal.weightage}%</td>
+                        <td className="text-right py-3 pr-4">
+                          <button
+                            onClick={() => handleUnlockGoal(goal)}
+                            disabled={goal.status !== "APPROVED"}
+                            className="btn btn-danger py-1 text-xs"
+                          >
+                            Unlock
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 6: Org Hierarchy */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            <div className="aq-card p-5 space-y-4">
+              <h3 className="text-xs font-semibold text-[#f5f5f5] uppercase tracking-[0.06em]">Employee Org Hierarchy</h3>
+              <div className="space-y-3">
+                {employees.map((employee) => (
+                  <div
+                    key={employee.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between border border-[#222222] bg-[#0d0d0d] rounded-lg p-4 gap-4"
+                  >
+                    <div>
+                      <p className="text-xs font-medium text-[#f5f5f5]">{employee.name}</p>
+                      <p className="micro text-[#555555] mt-0.5">{employee.email} · {employee.department || "General"}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="micro text-[#555555]">Report to:</span>
+                      <select
+                        value={employee.manager_id || ""}
+                        onChange={(e) => handleManagerChange(employee.id, e.target.value)}
+                        className="aq-input w-48 py-1.5 text-xs bg-[#111111]"
                       >
-                        Unlock
-                      </button>
-                    </td>
-                  </tr>
+                        <option value="">No manager</option>
+                        {managers.map((manager) => (
+                          <option key={manager.id} value={manager.id}>
+                            {manager.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
+              </div>
+            </div>
 
-        <Panel title="Audit Trail">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                  <th className="py-2">When</th>
-                  <th>Goal</th>
-                  <th>Field</th>
-                  <th>Old</th>
-                  <th>New</th>
-                  <th>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log) => (
-                  <tr key={log.id} className="border-b border-gray-50">
-                    <td className="py-2 text-gray-500">
-                      {new Date(log.created_at).toLocaleString()}
-                    </td>
-                    <td className="text-gray-500">
-                      {log.goal_title || log.goal_id}
-                    </td>
-                    <td className="text-gray-900">{log.field}</td>
-                    <td className="text-gray-500">{log.old_value || "-"}</td>
-                    <td className="text-gray-500">{log.new_value || "-"}</td>
-                    <td className="text-gray-500">{log.reason || "-"}</td>
-                  </tr>
+            <div className="aq-card p-5 space-y-4">
+              <h3 className="text-xs font-semibold text-[#f5f5f5] uppercase tracking-[0.06em]">System Managers</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {managers.map((manager) => (
+                  <div key={manager.id} className="flex items-center justify-between border border-[#222222] bg-[#0d0d0d] p-3 rounded-lg">
+                    <div>
+                      <p className="text-xs font-medium text-[#f5f5f5]">{manager.name}</p>
+                      <p className="micro text-[#555555] mt-0.5">{manager.email}</p>
+                    </div>
+                    <span className="status-badge status-submitted text-[10px] px-2.5 py-0.5">
+                      Manager
+                    </span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
-        </Panel>
-      </main>
-    </div>
-  );
-}
+        )}
 
-function Panel({ title, children }) {
-  return (
-    <section className="bg-white border border-gray-200 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-900 mb-4">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <p className="text-2xl font-semibold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
-    </div>
-  );
-}
-
-function StatusPill({ active, label }) {
-  return (
-    <span
-      className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-        active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-      }`}
-    >
-      {label}
-    </span>
+        {/* Tab 7: Audit Trail */}
+        {activeTab === "audit" && (
+          <div className="aq-card p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="aq-table w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left font-semibold">When</th>
+                    <th className="text-left font-semibold">Goal</th>
+                    <th className="text-left font-semibold">Field</th>
+                    <th className="text-left font-semibold">Old Value</th>
+                    <th className="text-left font-semibold">New Value</th>
+                    <th className="text-left font-semibold">Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-[#161616]/30 transition-colors">
+                      <td className="text-[#909090] text-xs py-3">{new Date(log.created_at).toLocaleString()}</td>
+                      <td className="text-[#909090] text-xs py-3 max-w-[150px] truncate">
+                        {log.goal_title || log.goal_id}
+                      </td>
+                      <td className="text-[#f5f5f5] font-medium py-3">{log.field}</td>
+                      <td className="text-[#c44a4a] text-xs font-mono py-3">{log.old_value || "—"}</td>
+                      <td className="text-[#4d9966] text-xs font-mono py-3">{log.new_value || "—"}</td>
+                      <td className="text-[#909090] text-xs py-3 italic max-w-[200px] truncate">
+                        {log.reason ? `"${log.reason}"` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppShell>
   );
 }

@@ -34,41 +34,48 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved, allowCh
     isPrimarySharedOwner && (allowCheckinOutsideWindow ? true : !!currentQuarter && activeQuarter === currentQuarter);
 
   return (
-    <div className="aq-card p-5">
+    <div className="aq-card">
       <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-[15px] font-medium tracking-[0.01em] text-[#f0f0f0]">{goal.title}</h3>
-          <p className="label-caps mt-2">{goal.thrustArea?.name}</p>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[13px] font-medium leading-snug text-[#f5f5f5] truncate">
+            {goal.title}
+          </h3>
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#909090] mt-1">
+            {goal.thrust_area?.name || goal.thrustArea?.name}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="metric-badge mono px-2.5 py-1 text-xs">{goal.weightage}%</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="score-badge null">{goal.weightage}%</span>
           {latestCheckIn && <ScoreBadge score={latestCheckIn.score} />}
         </div>
       </div>
 
-      <div className="tabs mb-4">
+      {/* Segmented Q1-Q4 tab row */}
+      <div className="quarter-tabs-row mb-4">
         {QUARTERS.map((q) => {
           const ci = checkInMap[q];
           const isActive = q === activeQuarter;
+          const isCompleted = ci && ci.progressStatus === "COMPLETED";
           return (
             <button
               key={q}
               onClick={() => setActiveQuarter(q)}
-              className={`tab ${isActive ? "active" : ""}`}
+              className={`quarter-tab flex-1 justify-center ${isActive ? "active" : ""}`}
             >
-              {q}
-              {ci && !isActive && <span className="mono ml-2 text-[11px] text-[#555]">{ci.score?.toFixed(0)}%</span>}
+              <span>{q}</span>
+              {isCompleted && <span className="dot-indicator" />}
             </button>
           );
         })}
       </div>
 
-      <p className="mb-4 text-center text-xs text-[#555]">
+      <p className="mb-4 text-center micro text-[#555555]">
         {activeQuarter} window opens: {QUARTER_LABELS[activeQuarter]}
-        {!canEditActiveQuarter && " · read only"}
+        {!canEditActiveQuarter && " · Read only"}
       </p>
+
       {goal.isShared && !isPrimarySharedOwner && (
-        <p className="mb-4 text-center text-xs text-[#888]">
+        <p className="mb-4 text-center text-xs text-[#909090] italic">
           Shared KPI achievement is updated by the primary owner and syncs here automatically.
         </p>
       )}

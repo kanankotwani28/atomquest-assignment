@@ -1,23 +1,23 @@
-// Colour-codes scores so managers and employees can
-// see at a glance which goals are on track vs struggling
 export default function ScoreBadge({ score }) {
   if (score === null || score === undefined) {
     return (
-      <span className="status-badge status-draft mono">
-        No data
+      <span className="score-badge null">
+        —
       </span>
     );
   }
 
-  const pct = parseFloat(score).toFixed(1);
+  const val = parseFloat(score);
+  const pct = val.toFixed(0);
 
-  const style =
-    score >= 80 ? 'status-approved' :
-    score >= 50 ? 'status-submitted':
-                  'status-returned';
+  const styleClass =
+    val >= 80 ? 'excellent' :
+    val >= 60 ? 'good' :
+    val >= 40 ? 'warn' :
+                'poor';
 
   return (
-    <span className={`status-badge mono ${style}`}>
+    <span className={`score-badge ${styleClass}`}>
       {pct}%
     </span>
   );
