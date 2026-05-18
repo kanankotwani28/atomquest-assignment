@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getMyCheckIns } from "../../api/checkins";
 import AppShell from "../../components/AppShell";
 import GoalCheckInCard from "../../components/GoalCheckInCard";
+import { SkeletonPage } from "../../components/Skeleton";
 import { Toaster } from "react-hot-toast";
 import { ClipboardCheck } from "lucide-react";
 
@@ -29,13 +30,7 @@ export default function EmployeeCheckIns() {
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) return (
-    <div className="admin-page">
-      <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-        <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
-      </div>
-    </div>
-  );
+  if (loading) return <SkeletonPage cards={3} />;
 
   const subtitle = allowCheckinOutsideWindow
     ? "Dev mode — check-ins allowed outside window"

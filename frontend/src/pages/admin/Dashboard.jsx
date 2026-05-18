@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
+import { SkeletonPage } from "../../components/Skeleton";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import {
   Users, BarChart2, AlertTriangle, RefreshCw, Share2,
   TrendingUp, History, Lock, Download, Plus, Eye,
@@ -77,6 +79,9 @@ export default function AdminDashboard() {
   const [cycleForm, setCycleForm]      = useState(initialCycle);
   const [activeTab, setActiveTab]     = useState("overview");
   const [hasActiveEscalations, setHasActiveEscalations] = useState(false);
+  const [confirm, setConfirm]        = useState(null);
+  const [auditPage, setAuditPage]   = useState(1);
+  const AUDIT_PAGE_SIZE = 15;
 
   const employees = useMemo(() => users.filter((u) => u.role === "EMPLOYEE"), [users]);
   const managers  = useMemo(() => users.filter((u) => u.role === "MANAGER"), [users]);
@@ -88,6 +93,8 @@ export default function AdminDashboard() {
   }), [completion]);
 
   const activeCycleName = cycles.find((c) => c.is_active)?.year || "No active cycle";
+  const totalAuditPages = Math.max(1, Math.ceil(auditLogs.length / AUDIT_PAGE_SIZE));
+  const paginatedAuditLogs = auditLogs.slice((auditPage - 1) * AUDIT_PAGE_SIZE, auditPage * AUDIT_PAGE_SIZE);
 
   const refresh = async () => {
     const [comp, cyc, usr, gl, aud, th, esc] = await Promise.all([
@@ -136,17 +143,22 @@ export default function AdminDashboard() {
     ...p, employee_ids: p.employee_ids.includes(id) ? p.employee_ids.filter((x) => x !== id) : [...p.employee_ids, id],
   }));
   const handleManagerChange = async (eid, mid) => { try { await updateUserManager(eid, mid); toast.success("Manager updated"); await refresh(); } catch (e) { toast.error(e.response?.data?.detail || "Failed"); } };
-  const handleUnlockGoal = async (goal) => { if (!confirm(`Unlock "${goal.title}"?`)) return; try { toast.success((await unlockGoal(goal.id)).data.message); await refresh(); } catch (e) { toast.error(e.response?.data?.detail || "Failed"); } };
+  const handleUnlockGoal = async (goal) => {
+    setConfirm({
+      title: "Unlock Goal",
+      message: `Unlock "${goal.title}"? The employee will be able to edit this goal again.`,
+      confirmLabel: "Unlock",
+      danger: true,
+      onConfirm: async () => {
+        try { toast.success((await unlockGoal(goal.id)).data.message); await refresh(); }
+        catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+      },
+    });
+  };
   const handleDownload = () => downloadAchievementReport().catch(() => toast.error("Download failed"));
   const handleDownloadCSV = () => downloadAchievementCSV().catch(() => toast.error("Download failed"));
 
-  if (loading) return (
-    <div className="admin-page">
-      <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-        <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
-      </div>
-    </div>
-  );
+  if (loading) return <SkeletonPage cards={4} />;
 
   return (
     <div className="admin-page">
@@ -554,7 +566,7 @@ export default function AdminDashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div className="admin-section-head">
                 <span className="admin-section-label">System Audit Trail</span>
-                <span style={{ fontSize: 11, color: "#475569" }}>{auditLogs.length} events</span>
+                <span style={{ fontSize: 11, color: "#475569" }}>{auditLogs.length} events · page {auditPage}</span>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
@@ -562,10 +574,10 @@ export default function AdminDashboard() {
                     <tr>{["Timestamp","Action","Goal","Field","From","To","Category"].map((c) => <th key={c}>{c}</th>)}</tr>
                   </thead>
                   <tbody>
-                    {auditLogs.length === 0 && (
+                    {paginatedAuditLogs.length === 0 && (
                       <tr><td colSpan={7} className="admin-td-empty">No audit logs yet</td></tr>
                     )}
-                    {auditLogs.map((log) => {
+                    {paginatedAuditLogs.map((log) => {
                       const badge = getAuditBadge(log.action_type, log.category);
                       return (
                         <tr key={log.id}>
@@ -591,11 +603,28 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              {totalAuditPages > 1 && (
+                <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+                  <button className="admin-btn admin-btn--sm" onClick={() => setAuditPage((p) => Math.max(1, p - 1))} disabled={auditPage === 1}>← Prev</button>
+                  <span style={{ display: "flex", alignItems: "center", fontSize: 12, color: "#64748B" }}>Page {auditPage} of {totalAuditPages}</span>
+                  <button className="admin-btn admin-btn--sm" onClick={() => setAuditPage((p) => Math.min(totalAuditPages, p + 1))} disabled={auditPage === totalAuditPages}>Next →</button>
+                </div>
+              )}
             </div>
           )}
 
         </div>
       </div>
+      {confirm && (
+        <ConfirmDialog
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          danger={confirm.danger}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
     </div>
   );
 }

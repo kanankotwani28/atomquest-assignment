@@ -8,6 +8,8 @@ import AppShell from "../../components/AppShell";
 import GoalCard from "../../components/GoalCard";
 import GoalFormModal from "../../components/GoalFormModal";
 import WeightageBar from "../../components/WeightageBar";
+import { SkeletonPage } from "../../components/Skeleton";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import toast, { Toaster } from "react-hot-toast";
 import { Target, Plus, Send, CheckCircle2, AlertTriangle } from "lucide-react";
 
@@ -19,6 +21,7 @@ export default function EmployeeDashboard() {
   const [modalOpen, setModalOpen]      = useState(false);
   const [editingGoal, setEditingGoal]  = useState(null);
   const [loading, setLoading]         = useState(true);
+  const [confirm, setConfirm]           = useState(null);
 
   const fetchGoals = async () => {
     try {
@@ -59,24 +62,32 @@ export default function EmployeeDashboard() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this goal?")) return;
-    try { await deleteGoal(id); toast.success("Goal deleted"); fetchGoals(); }
-    catch (err) { toast.error(err.response?.data?.detail || "Failed to delete goal"); }
+    setConfirm({
+      title: "Delete Goal",
+      message: "Are you sure you want to delete this goal? This action cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+      onConfirm: async () => {
+        try { await deleteGoal(id); toast.success("Goal deleted"); fetchGoals(); }
+        catch (err) { toast.error(err.response?.data?.detail || "Failed to delete goal"); }
+      },
+    });
   };
 
   const handleSubmitAll = async () => {
-    if (!confirm("Submit all goals for manager approval? You cannot edit them after submission.")) return;
-    try { const res = await submitAllGoals(); toast.success(res.data.message); fetchGoals(); }
-    catch (err) { toast.error(err.response?.data?.detail || err.response?.data?.error || "Submission failed"); }
+    setConfirm({
+      title: "Submit Goals for Approval",
+      message: "Submit all goals for manager approval? You cannot edit them after submission.",
+      confirmLabel: "Submit All",
+      danger: false,
+      onConfirm: async () => {
+        try { const res = await submitAllGoals(); toast.success(res.data.message); fetchGoals(); }
+        catch (err) { toast.error(err.response?.data?.detail || err.response?.data?.error || "Submission failed"); }
+      },
+    });
   };
 
-  if (loading) return (
-    <div className="admin-page">
-      <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-        <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
-      </div>
-    </div>
-  );
+  if (loading) return <SkeletonPage cards={3} />;
 
   return (
     <AppShell user={user} logout={logout} title="My Goals" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}>
@@ -199,6 +210,16 @@ export default function EmployeeDashboard() {
         existingGoal={editingGoal}
         remainingWeightage={editingGoal ? remainingWeightage + editingGoal.weightage : remainingWeightage}
       />
+      {confirm && (
+        <ConfirmDialog
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          danger={confirm.danger}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
     </AppShell>
   );
 }

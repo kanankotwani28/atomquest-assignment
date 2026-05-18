@@ -1955,3 +1955,41 @@ select.admin-input {
 }
 
 .admin-modal-field:last-child { margin-bottom: 0; }
+
+/* ─── Skeleton Animation ───────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.skeleton {
+  display: block;
+  background: rgba(255,255,255,0.05);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Success Flash Animation ──────────────────────────────────── */
+@keyframes success-flash {
+  0%   { background: rgba(16,185,129,0.20); }
+  100% { background: transparent; }
+}
+
+@keyframes success-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+.animate-success {
+  animation: success-flash 1.2s ease-out forwards, success-pulse 1.2s ease-out forwards;
+}
+
+/* ─── Fade In Animation ───────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 300ms ease-out forwards;
+}

@@ -73,33 +73,34 @@ def get_admin_analytics(db: Session = Depends(get_db),
         }
 
     employees = db.query(User).filter(User.role == RoleEnum.EMPLOYEE).all()
-    goals = db.query(Goal).filter(Goal.cycle_id == cycle.id).all()
+
+    emp_ids = [e.id for e in employees]
+    goals = (db.query(Goal)
+             .filter(Goal.cycle_id == cycle.id, Goal.owner_id.in_(emp_ids))
+             .all())
+
+    goals_by_owner = {}
+    for g in goals:
+        goals_by_owner.setdefault(g.owner_id, []).append(g)
 
     employee_scores_list = []
     heatmap_list = []
 
     for emp in employees:
-        emp_goals = db.query(Goal).filter(
-            Goal.owner_id == emp.id,
-            Goal.cycle_id == cycle.id,
-            Goal.status == GoalStatusEnum.APPROVED
-        ).all()
+        emp_goals = goals_by_owner.get(emp.id, [])
+        approved_goals = [g for g in emp_goals if g.status == GoalStatusEnum.APPROVED]
 
         q_sums = {"Q1": 0.0, "Q2": 0.0, "Q3": 0.0, "Q4": 0.0}
         q_weights = {"Q1": 0.0, "Q2": 0.0, "Q3": 0.0, "Q4": 0.0}
-
         latest_score_sum = 0.0
         latest_weight_sum = 0.0
 
-        for g in emp_goals:
+        for g in approved_goals:
             g_checkins = {ci.quarter: ci for ci in g.check_ins if ci.score is not None}
-            
             for q in ["Q1", "Q2", "Q3", "Q4"]:
                 if q in g_checkins:
                     q_sums[q] += g_checkins[q].score * g.weightage
                     q_weights[q] += g.weightage
-
-            # Latest check-in for overall score
             latest_q = None
             for q in ["Q4", "Q3", "Q2", "Q1"]:
                 if q in g_checkins:
@@ -116,23 +117,15 @@ def get_admin_analytics(db: Session = Depends(get_db),
         overall = round(latest_score_sum / latest_weight_sum, 1) if latest_weight_sum > 0 else None
 
         employee_scores_list.append({
-            "employee": emp.name,
-            "department": emp.department or "General",
-            "q1_score": q_score["Q1"],
-            "q2_score": q_score["Q2"],
-            "q3_score": q_score["Q3"],
-            "q4_score": q_score["Q4"],
-            "overall": overall
+            "employee": emp.name, "department": emp.department or "General",
+            "q1_score": q_score["Q1"], "q2_score": q_score["Q2"],
+            "q3_score": q_score["Q3"], "q4_score": q_score["Q4"], "overall": overall
         })
 
         heatmap_list.append({
-            "employee": emp.name,
-            "department": emp.department or "General",
-            "q1": q_score["Q1"],
-            "q2": q_score["Q2"],
-            "q3": q_score["Q3"],
-            "q4": q_score["Q4"],
-            "overall": overall
+            "employee": emp.name, "department": emp.department or "General",
+            "q1": q_score["Q1"], "q2": q_score["Q2"],
+            "q3": q_score["Q3"], "q4": q_score["Q4"], "overall": overall
         })
 
     # Summary calculations
@@ -142,13 +135,14 @@ def get_admin_analytics(db: Session = Depends(get_db),
     total_employees = len(employees)
     total_goals = len(goals)
 
-    employees_with_checkin = 0
+employees_with_checkin = 0
+    goal_ids_with_checkin = set(
+        row[0] for row in
+        db.query(CheckIn.goal_id).join(Goal).filter(Goal.cycle_id == cycle.id).distinct().all()
+    )
     for emp in employees:
-        has_checkin = db.query(CheckIn).join(Goal).filter(
-            Goal.owner_id == emp.id,
-            Goal.cycle_id == cycle.id
-        ).first() is not None
-        if has_checkin:
+        emp_goal_ids = [g.id for g in goals_by_owner.get(emp.id, [])]
+        if any(gid in goal_ids_with_checkin for gid in emp_goal_ids):
             employees_with_checkin += 1
 
     checkin_completion_rate = round((employees_with_checkin / total_employees) * 100, 1) if total_employees > 0 else 0.0
@@ -426,29 +420,52 @@ def achievement_report_csv(db: Session = Depends(get_db),
     cycle  = db.query(Cycle).filter(Cycle.is_active == True).first()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Employee","Department","Goal Title","Thrust Area",
-                     "UoM","Target","Weightage",
-                     "Q1 Actual","Q1 Score","Q2 Actual","Q2 Score",
-                     "Q3 Actual","Q3 Score","Q4 Actual","Q4 Score"])
+
+    writer.writerow(["Employee", "Department", "Goal Title", "Thrust Area",
+                     "UoM Type", "Target", "Weightage %",
+                     "Q1 Actual", "Q1 Score %", "Q1 Status",
+                     "Q2 Actual", "Q2 Score %", "Q2 Status",
+                     "Q3 Actual", "Q3 Score %", "Q3 Status",
+                     "Q4 Actual", "Q4 Score %", "Q4 Status"])
+
+    PROGRESS_LABELS = {
+        "NOT_STARTED": "Not Started",
+        "ON_TRACK":    "On Track",
+        "COMPLETED":   "Completed",
+    }
 
     for emp in db.query(User).filter(User.role == RoleEnum.EMPLOYEE).all():
         for g in db.query(Goal).filter(
             Goal.owner_id == emp.id, Goal.cycle_id == cycle.id
         ).all():
             ci_map = {ci.quarter: ci for ci in g.check_ins}
-            row = [emp.name, emp.department or "", g.title,
-                   g.thrust_area.name if g.thrust_area else "",
-                   g.uom_type.value, g.target, g.weightage]
-            for q in ["Q1","Q2","Q3","Q4"]:
+            row = [
+                emp.name,
+                emp.department or "",
+                g.title,
+                g.thrust_area.name if g.thrust_area else "",
+                g.uom_type.value.replace("_", " ").title() if hasattr(g.uom_type, "value") else str(g.uom_type),
+                g.target,
+                g.weightage,
+            ]
+            for q in ["Q1", "Q2", "Q3", "Q4"]:
                 ci = ci_map.get(q)
-                row.extend([ci.actual if ci else "", ci.score if ci else ""])
+                row.extend([
+                    ci.actual if ci and ci.actual is not None else "",
+                    f"{ci.score:.1f}" if ci and ci.score is not None else "",
+                    PROGRESS_LABELS.get(ci.progress_status.value if hasattr(ci.progress_status, "value") else str(ci.progress_status), "") if ci else "",
+                ])
             writer.writerow(row)
 
     output.seek(0)
+    content = "\ufeff" + output.getvalue()
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode()),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=achievement_report.csv"}
+        io.BytesIO(content.encode("utf-8-sig")),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={
+            "Content-Disposition": "attachment; filename=atomquest_achievement_report.csv",
+            "Cache-Control": "no-cache",
+        }
     )
 
 # ── SSE completion stream ─────────────────────────────────────────

@@ -49,6 +49,13 @@ app.include_router(escalation.router, prefix="/api")
 # Register automatic audit listeners (safe to call multiple times)
 register_audit_listeners()
 
+# Start escalation scheduler (runs every 30 minutes)
+try:
+    from app.services.escalation_scheduler import start_escalation_scheduler
+    start_escalation_scheduler()
+except Exception as e:
+    print(f"Failed to start escalation scheduler: {e}")
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "message": "AtomQuest FastAPI running"}

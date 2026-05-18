@@ -433,6 +433,13 @@ def manager_edit_goal(goal_id: str, body: ManagerGoalEdit,
         goal.target = body.target
 
     if body.weightage is not None and body.weightage != goal.weightage:
+        other_total = db.query(func.coalesce(func.sum(Goal.weightage), 0)).filter(
+            Goal.owner_id == goal.owner_id,
+            Goal.cycle_id == goal.cycle_id,
+            Goal.id != goal.id
+        ).scalar() or 0
+        if other_total + body.weightage > 100:
+            raise HTTPException(status_code=400, detail=f"Total weightage would exceed 100%. Current: {other_total}%, remaining: {100 - other_total}%")
         log_change(db, goal.id, current_user.id, "weightage", goal.weightage, body.weightage,
                    "Edited by manager during review")
         goal.weightage = body.weightage

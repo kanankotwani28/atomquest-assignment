@@ -4,16 +4,16 @@ from app.models.models import UoMTypeEnum
 def calculate_score(uom_type, target, actual, completion_date):
     if uom_type == UoMTypeEnum.NUMERIC_MIN:
         if actual is None or target == 0: return 0
-        return round((actual / target) * 100, 2)
+        return round(min(200, (actual / target) * 100), 2)
 
     if uom_type == UoMTypeEnum.NUMERIC_MAX:
         if actual is None or actual == 0: return 0
-        return round((target / actual) * 100, 2)
+        return round(min(200, (target / actual) * 100), 2)
 
     if uom_type == UoMTypeEnum.PERCENTAGE:
         if actual is None or target == 0: return 0
         pct = (actual / target) * 100
-        return round(min(pct, 100), 2)
+        return round(min(pct, 200), 2)
 
     if uom_type == UoMTypeEnum.TIMELINE:
         if not completion_date: return 0

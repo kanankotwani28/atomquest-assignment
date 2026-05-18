@@ -5,6 +5,8 @@ import { getTeamGoals, approveGoals, returnGoal, pushTeamSharedGoal } from "../.
 import AppShell from "../../components/AppShell";
 import EmployeeGoalCard from "../../components/EmployeeGoalCard";
 import ReturnReasonModal from "../../components/ReturnReasonModal";
+import { SkeletonPage } from "../../components/Skeleton";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import toast, { Toaster } from "react-hot-toast";
 import { Users, Clock, CheckCircle, Target, Send, ShieldAlert } from "lucide-react";
 
@@ -31,8 +33,9 @@ export default function ManagerDashboard() {
   const [cycle, setCycle] = useState(null);
   const [thrustAreas, setThrustAreas] = useState([]);
   const [sharedGoal, setSharedGoal] = useState(initialSharedGoal);
-  const [loading, setLoading] = useState(true);
+const [loading, setLoading]         = useState(true);
   const [returningGoal, setReturningGoal] = useState(null);
+  const [confirm, setConfirm]             = useState(null);
 
   const fetchTeam = async () => {
     try {
@@ -53,14 +56,16 @@ export default function ManagerDashboard() {
 
   const handleApprove = async (employeeId) => {
     const emp = team.find((t) => t.employee.id === employeeId);
-    if (!confirm(`Approve all submitted goals for ${emp?.employee.name}? They will be locked.`)) return;
-    try {
-      const res = await approveGoals(employeeId);
-      toast.success(res.data.message);
-      fetchTeam();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Approval failed");
-    }
+    setConfirm({
+      title: "Approve Goals",
+      message: `Approve all submitted goals for ${emp?.employee.name}? They will be locked and cannot be edited without admin intervention.`,
+      confirmLabel: "Approve",
+      danger: false,
+      onConfirm: async () => {
+        try { const res = await approveGoals(employeeId); toast.success(res.data.message); fetchTeam(); }
+        catch (err) { toast.error(err.response?.data?.error || "Approval failed"); }
+      },
+    });
   };
 
   const handleReturn = async (reason) => {
@@ -114,14 +119,7 @@ export default function ManagerDashboard() {
   const totalGoals = team.reduce((s, t) => s + t.goals.length, 0);
   const teamScore = totalGoals ? ((totalApproved / totalGoals) * 100).toFixed(1) : "0.0";
 
-  if (loading) {
-    return (
-      <div className="admin-page">
-        <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-          <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
-        </div>
-      </div>
-    );
+  if (loading) return <SkeletonPage cards={4} />;
   }
 
   return (
@@ -301,6 +299,16 @@ export default function ManagerDashboard() {
         onConfirm={handleReturn}
         onClose={() => setReturningGoal(null)}
       />
+      {confirm && (
+        <ConfirmDialog
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          danger={confirm.danger}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
     </AppShell>
   );
 }

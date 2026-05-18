@@ -139,17 +139,27 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
               <div className="admin-modal-field">
                 <label className="admin-label">Weightage % <span style={{ color: "#EF4444" }}>*</span></label>
                 <input {...register("weightage")} type="number" min="10" max="100" className="admin-input" placeholder={`max ${remainingWeightage}%`} />
-                <span style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>{remainingWeightage}% remaining</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                  <span style={{ fontSize: 10, color: "#64748B" }}>{remainingWeightage.toFixed(0)}% remaining</span>
+                  <span style={{ fontSize: 10, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#94A3B8" }}>
+                    {isOver ? "⚠ exceeds limit" : isExact ? "✓ balanced" : `${(remainingWeightage - watchedWeightage).toFixed(0)}% left`}
+                  </span>
+                </div>
                 {errors.weightage && <span style={{ fontSize: 11, color: "#EF4444", marginTop: 2 }}>{errors.weightage.message}</span>}
               </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-              <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", borderRadius: 3, background: isOver ? "#EF4444" : isExact ? "#10B981" : "#818CF8", width: `${used}%`, transition: "width 300ms ease" }} />
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 3, background: isOver ? "#EF4444" : isExact ? "#10B981" : "#818CF8", width: `${Math.min(used, 100)}%`, transition: "width 300ms ease" }} />
+                </div>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#64748B", minWidth: 28, textAlign: "right" }}>
+                  {watchedWeightage || 0}%
+                </span>
               </div>
-              <span style={{ fontSize: 11, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#64748B" }}>
-                {watchedWeightage || 0}% selected for this goal
+              <span style={{ fontSize: 10, color: "#475569" }}>
+                Total across all goals after this: {(100 - remainingWeightage + watchedWeightage).toFixed(0)}% / 100%
               </span>
             </div>
           </div>

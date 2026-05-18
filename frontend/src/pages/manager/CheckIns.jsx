@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getTeamCheckIns } from "../../api/checkins";
 import AppShell from "../../components/AppShell";
 import ManagerCheckInRow from "../../components/ManagerCheckInRow";
+import { SkeletonPage } from "../../components/Skeleton";
 import { Toaster } from "react-hot-toast";
 import { ChevronDown, ChevronUp, Users } from "lucide-react";
 
@@ -29,13 +30,7 @@ export default function ManagerCheckIns() {
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) return (
-    <div className="admin-page">
-      <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-        <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
-      </div>
-    </div>
-  );
+  if (loading) return <SkeletonPage title={false} cards={3} />;
 
   return (
     <AppShell

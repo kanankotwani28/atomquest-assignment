@@ -45,13 +45,15 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
 
   const previewScore = () => {
     if (uom === "ZERO") return actual === "" ? null : parseFloat(actual) === 0 ? 100 : 0;
-    if (uom === "NUMERIC_MIN") { if (!actual || !goal.target) return null; return parseFloat(((parseFloat(actual) / goal.target) * 100).toFixed(2)); }
-    if (uom === "NUMERIC_MAX") { if (!actual || parseFloat(actual) === 0) return null; return parseFloat(((goal.target / parseFloat(actual)) * 100).toFixed(2)); }
+    if (uom === "NUMERIC_MIN") { if (!actual || !goal.target) return null; return parseFloat(Math.min(200, ((parseFloat(actual) / goal.target) * 100)).toFixed(2)); }
+    if (uom === "NUMERIC_MAX") { if (!actual || parseFloat(actual) === 0) return null; return parseFloat(Math.min(200, ((goal.target / parseFloat(actual)) * 100)).toFixed(2)); }
     if (uom === "PERCENTAGE") { if (!actual || !goal.target) return null; return parseFloat(Math.min(100, ((parseFloat(actual) / goal.target) * 100)).toFixed(2)); }
     if (uom === "TIMELINE") {
       if (!completionDate) return null;
-      const deadline = new Date(goal.target);
-      const completed = new Date(completionDate + "T00:00:00");
+      const raw = Number(goal.target);
+      const deadline = isNaN(raw) ? new Date(goal.target) : raw > 1e12 ? new Date(raw) : new Date(raw * 1000);
+      const completed = new Date(completionDate + "T12:00:00");
+      if (isNaN(deadline.getTime()) || isNaN(completed.getTime())) return null;
       if (completed <= deadline) return 100;
       const daysLate = (completed - deadline) / (1000 * 60 * 60 * 24);
       return parseFloat(Math.max(0, 100 - daysLate * 5).toFixed(2));
@@ -70,6 +72,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
   };
 
   const fillColor = getProgressColor(scorePct);
+  const clampedScore = Math.min(scorePct, 100);
   const canSubmit = isTimeline ? !!completionDate : actual !== "";
 
   const handleSave = async () => {
@@ -105,7 +108,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
         <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
           <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg, ${fillColor}, ${fillColor}CC)`, width: `${Math.min(scorePct, 100)}%`, transition: "width 500ms ease" }} />
         </div>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#fff", width: 48, textAlign: "right" }}>{scorePct.toFixed(1)}%</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#fff", width: 48, textAlign: "right" }}>{clampedScore.toFixed(1)}%</span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
