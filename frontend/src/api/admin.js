@@ -22,6 +22,7 @@ export const updateUserManager  = (id, managerId) => api.put(`/admin/users/${id}
 // ── Goal oversight ────────────────────────────────────────────────
 export const getAdminGoals = ()   => api.get("/admin/goals");
 export const unlockGoal    = (id) => api.post(`/admin/goals/${id}/unlock`);
+export const getAnalytics  = ()   => api.get("/admin/analytics");
 
 // ── Excel download ────────────────────────────────────────────────
 export const downloadAchievementReport = async () => {

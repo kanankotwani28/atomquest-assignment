@@ -4,6 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
 import AppShell from "../../components/AppShell";
 import ScoreBadge from "../../components/ScoreBadge";
+import { BarChart2 } from "lucide-react";
+import Analytics from "./Analytics";
 import {
   activateCycle,
   createCycle,
@@ -204,6 +206,7 @@ export default function AdminDashboard() {
 
   const tabs = [
     { id: "overview", label: "Overview" },
+    { id: "analytics", label: "Analytics", icon: BarChart2 },
     { id: "cycles", label: "Cycles" },
     { id: "shared_goals", label: "Shared Goals" },
     { id: "completion", label: "Completion" },
@@ -233,16 +236,22 @@ export default function AdminDashboard() {
 
       <div className="space-y-6">
         {/* Horizontal Navigation Tabs */}
-        <div className="quarter-tabs-row overflow-x-auto flex-nowrap scrollbar-thin">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`quarter-tab min-w-[90px] text-center ${activeTab === tab.id ? "active" : ""}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="quarter-tabs-row overflow-x-auto flex-nowrap scrollbar-thin flex gap-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`quarter-tab min-w-[90px] text-center flex items-center justify-center gap-1.5 ${
+                  activeTab === tab.id ? "active" : ""
+                }`}
+              >
+                {Icon && <Icon size={14} strokeWidth={1.5} />}
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab 1: Overview (2x3 Grid) */}
@@ -294,6 +303,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* Tab: Analytics */}
+        {activeTab === "analytics" && <Analytics />}
 
         {/* Tab 2: Cycles Management */}
         {activeTab === "cycles" && (

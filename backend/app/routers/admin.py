@@ -51,6 +51,217 @@ def completion_dashboard(db: Session = Depends(get_db),
 
     return results
 
+# ── Analytics ─────────────────────────────────────────────────────
+@router.get("/analytics")
+def get_admin_analytics(db: Session = Depends(get_db),
+                         _=Depends(require_role(RoleEnum.ADMIN))):
+    cycle = db.query(Cycle).filter(Cycle.is_active == True).first()
+    if not cycle:
+        return {
+            "summary": {
+                "avg_overall_score": None,
+                "total_employees": 0,
+                "total_goals": 0,
+                "checkin_completion_rate": 0.0
+            },
+            "employee_scores": [],
+            "thrust_area_distribution": [],
+            "uom_distribution": [],
+            "manager_effectiveness": [],
+            "heatmap": [],
+            "goal_status_distribution": []
+        }
+
+    employees = db.query(User).filter(User.role == RoleEnum.EMPLOYEE).all()
+    goals = db.query(Goal).filter(Goal.cycle_id == cycle.id).all()
+
+    employee_scores_list = []
+    heatmap_list = []
+
+    for emp in employees:
+        emp_goals = db.query(Goal).filter(
+            Goal.owner_id == emp.id,
+            Goal.cycle_id == cycle.id,
+            Goal.status == GoalStatusEnum.APPROVED
+        ).all()
+
+        q_sums = {"Q1": 0.0, "Q2": 0.0, "Q3": 0.0, "Q4": 0.0}
+        q_weights = {"Q1": 0.0, "Q2": 0.0, "Q3": 0.0, "Q4": 0.0}
+
+        latest_score_sum = 0.0
+        latest_weight_sum = 0.0
+
+        for g in emp_goals:
+            g_checkins = {ci.quarter: ci for ci in g.check_ins if ci.score is not None}
+            
+            for q in ["Q1", "Q2", "Q3", "Q4"]:
+                if q in g_checkins:
+                    q_sums[q] += g_checkins[q].score * g.weightage
+                    q_weights[q] += g.weightage
+
+            # Latest check-in for overall score
+            latest_q = None
+            for q in ["Q4", "Q3", "Q2", "Q1"]:
+                if q in g_checkins:
+                    latest_q = q
+                    break
+            if latest_q:
+                latest_score_sum += g_checkins[latest_q].score * g.weightage
+                latest_weight_sum += g.weightage
+
+        q_score = {}
+        for q in ["Q1", "Q2", "Q3", "Q4"]:
+            q_score[q] = round(q_sums[q] / q_weights[q], 1) if q_weights[q] > 0 else None
+
+        overall = round(latest_score_sum / latest_weight_sum, 1) if latest_weight_sum > 0 else None
+
+        employee_scores_list.append({
+            "employee": emp.name,
+            "department": emp.department or "General",
+            "q1_score": q_score["Q1"],
+            "q2_score": q_score["Q2"],
+            "q3_score": q_score["Q3"],
+            "q4_score": q_score["Q4"],
+            "overall": overall
+        })
+
+        heatmap_list.append({
+            "employee": emp.name,
+            "department": emp.department or "General",
+            "q1": q_score["Q1"],
+            "q2": q_score["Q2"],
+            "q3": q_score["Q3"],
+            "q4": q_score["Q4"],
+            "overall": overall
+        })
+
+    # Summary calculations
+    overall_scores_list = [item["overall"] for item in employee_scores_list if item["overall"] is not None]
+    avg_overall_score = round(sum(overall_scores_list) / len(overall_scores_list), 1) if overall_scores_list else None
+    
+    total_employees = len(employees)
+    total_goals = len(goals)
+
+    employees_with_checkin = 0
+    for emp in employees:
+        has_checkin = db.query(CheckIn).join(Goal).filter(
+            Goal.owner_id == emp.id,
+            Goal.cycle_id == cycle.id
+        ).first() is not None
+        if has_checkin:
+            employees_with_checkin += 1
+
+    checkin_completion_rate = round((employees_with_checkin / total_employees) * 100, 1) if total_employees > 0 else 0.0
+
+    # Thrust area distribution
+    thrust_areas = db.query(ThrustArea).all()
+    thrust_dist = []
+    for ta in thrust_areas:
+        ta_goals = db.query(Goal).filter(
+            Goal.thrust_area_id == ta.id,
+            Goal.cycle_id == cycle.id
+        ).all()
+        
+        goal_count = len(ta_goals)
+        ta_checkins = []
+        for g in ta_goals:
+            for ci in g.check_ins:
+                if ci.score is not None:
+                    ta_checkins.append(ci.score)
+
+        avg_score = round(sum(ta_checkins) / len(ta_checkins), 1) if ta_checkins else None
+        thrust_dist.append({
+            "name": ta.name,
+            "count": goal_count,
+            "avg_score": avg_score
+        })
+
+    # UoM distribution
+    uom_counts = {"NUMERIC_MIN": 0, "NUMERIC_MAX": 0, "TIMELINE": 0, "ZERO": 0}
+    for g in goals:
+        val = g.uom_type.value if hasattr(g.uom_type, 'value') else str(g.uom_type)
+        if val in uom_counts:
+            uom_counts[val] += 1
+    uom_dist = [{"uom_type": k, "count": v} for k, v in uom_counts.items()]
+
+    # Manager effectiveness
+    managers = db.query(User).filter(User.role == RoleEnum.MANAGER).all()
+    mgr_eff = []
+    emp_overall_map = {item["employee"]: item["overall"] for item in employee_scores_list}
+
+    for mgr in managers:
+        reports = db.query(User).filter(
+            User.role == RoleEnum.EMPLOYEE,
+            User.manager_id == mgr.id
+        ).all()
+        team_size = len(reports)
+        if team_size == 0:
+            continue
+
+        reports_with_checkin = 0
+        report_overall_scores = []
+
+        for rep in reports:
+            has_checkin = db.query(CheckIn).join(Goal).filter(
+                Goal.owner_id == rep.id,
+                Goal.cycle_id == cycle.id
+            ).first() is not None
+            if has_checkin:
+                reports_with_checkin += 1
+            
+            overall = emp_overall_map.get(rep.name)
+            if overall is not None:
+                report_overall_scores.append(overall)
+
+        checkin_rate = round((reports_with_checkin / team_size) * 100, 1) if team_size > 0 else 0.0
+        avg_team_score = round(sum(report_overall_scores) / len(report_overall_scores), 1) if report_overall_scores else None
+
+        mgr_eff.append({
+            "manager": mgr.name,
+            "team_size": team_size,
+            "checkin_completion_rate": checkin_rate,
+            "avg_team_score": avg_team_score
+        })
+
+    # Goal distribution by status per department
+    dept_status = {}
+    for g in goals:
+        dept = g.owner.department or "General"
+        status = g.status.value if hasattr(g.status, 'value') else str(g.status)
+        if dept not in dept_status:
+            dept_status[dept] = {"DRAFT": 0, "SUBMITTED": 0, "APPROVED": 0, "RETURNED": 0}
+        
+        if status == "REVISION_REQUIRED":
+            status = "DRAFT"
+        if status in dept_status[dept]:
+            dept_status[dept][status] += 1
+
+    goal_status_dist = []
+    for dept, counts in dept_status.items():
+        goal_status_dist.append({
+            "department": dept,
+            "DRAFT": counts["DRAFT"],
+            "SUBMITTED": counts["SUBMITTED"],
+            "APPROVED": counts["APPROVED"],
+            "RETURNED": counts["RETURNED"],
+            "total": sum(counts.values())
+        })
+
+    return {
+        "summary": {
+            "avg_overall_score": avg_overall_score,
+            "total_employees": total_employees,
+            "total_goals": total_goals,
+            "checkin_completion_rate": checkin_completion_rate
+        },
+        "employee_scores": employee_scores_list,
+        "thrust_area_distribution": thrust_dist,
+        "uom_distribution": uom_dist,
+        "manager_effectiveness": mgr_eff,
+        "heatmap": heatmap_list,
+        "goal_status_distribution": goal_status_dist
+    }
+
 # ── Audit trail ───────────────────────────────────────────────────
 @router.get("/audit-logs")
 def get_audit_logs(db: Session = Depends(get_db),
