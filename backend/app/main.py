@@ -25,6 +25,21 @@ def run_pending_migrations():
 
 run_pending_migrations()
 
+# Auto-seed database on startup to guarantee demo accounts exist
+try:
+    import sys
+    import os
+    # Ensure backend directory is in path
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if backend_dir not in sys.path:
+        sys.path.append(backend_dir)
+    from seed import seed
+    seed()
+    print("Auto-seeding: demo accounts verified and seeded successfully")
+except Exception as e:
+    print(f"Auto-seeding skipped/failed on startup: {e}")
+
+
 app = FastAPI(
     title="AtomQuest Goal Portal",
     description="Goal Setting & Tracking Portal API",
