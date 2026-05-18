@@ -13,7 +13,6 @@ import {
   getCompletionDashboard,
   getCycles,
   pushSharedGoal,
-  startCompletionStream,
   unlockGoal,
   updateUserManager,
 } from "../../api/admin";

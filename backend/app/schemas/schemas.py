@@ -137,12 +137,13 @@ class SharedGoalPush(BaseModel):
 class AuditLogOut(BaseModel):
     id:            UUID4
     goal_id:       UUID4
-    changed_by_id: UUID4
-    goal_title:    Optional[str] = None
+    goal_title:    Optional[str] = None   # ← add this
+    changed_by_id: Optional[UUID4]
     field:         str
     old_value:     Optional[str]
     new_value:     Optional[str]
     reason:        Optional[str]
     created_at:    datetime
+
     class Config:
         from_attributes = True
