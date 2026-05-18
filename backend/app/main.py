@@ -79,3 +79,32 @@ except Exception as e:
 @app.get("/api/health")
 def health():
     return {"status": "ok", "message": "AtomQuest FastAPI running"}
+
+@app.get("/api/debug-users")
+def debug_users():
+    db = SessionLocal()
+    try:
+        from app.models.models import User
+        users = db.query(User).all()
+        user_list = [{"id": str(u.id), "email": u.email, "role": u.role.value if u.role else None} for u in users]
+        
+        # If empty, force-seed right now
+        seeded = False
+        if not users:
+            from seed import seed
+            seed()
+            seeded = True
+            users = db.query(User).all()
+            user_list = [{"id": str(u.id), "email": u.email, "role": u.role.value if u.role else None} for u in users]
+            
+        return {
+            "user_count": len(users),
+            "users": user_list,
+            "force_seeded": seeded,
+            "message": "Database is populated" if user_list else "Database is empty"
+        }
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        db.close()
+
