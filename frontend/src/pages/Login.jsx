@@ -167,6 +167,11 @@ export default function Login() {
         {/* RIGHT SECTION */}
         <div className="w-full lg:w-[460px] flex items-center justify-center px-4 py-5">
           <div className="w-full max-w-[400px] bg-[#0B1637]/95 border border-white/10 backdrop-blur-xl rounded-[28px] p-6 shadow-2xl">
+            {/* Mobile Logo */}
+            <div className="flex justify-center mb-6 lg:hidden">
+              <AtomQuestLogo />
+            </div>
+
             {/* Top Icon */}
             <div className="flex justify-center mb-5">
               <div className="w-20 h-20 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
@@ -291,7 +296,10 @@ export default function Login() {
             </div>
 
             {/* Microsoft Button */}
-            <button className="w-full h-[50px] rounded-xl bg-[#08142F] border border-white/10 hover:bg-[#0B1838] transition-all duration-300 flex items-center justify-center gap-3 text-[0.9rem] font-semibold">
+            <button
+              type="button"
+              className="w-full h-[50px] rounded-xl bg-[#08142F] border border-white/10 hover:bg-[#0B1838] transition-all duration-300 flex items-center justify-center gap-3 text-[0.9rem] font-semibold"
+            >
               <div className="grid grid-cols-2 gap-[2px] w-4 h-4">
                 <div className="bg-red-500" />
                 <div className="bg-green-500" />
@@ -301,6 +309,41 @@ export default function Login() {
 
               Continue with Microsoft
             </button>
+
+            {/* Mobile Quick Access Demos */}
+            <div className="mt-6 lg:hidden">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                  Quick Access Demos
+                </span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {DEMO_ACCOUNTS.map((account) => {
+                  const Icon = account.icon;
+                  return (
+                    <button
+                      key={account.title}
+                      type="button"
+                      onClick={() => fillDemo(account.email)}
+                      className="group bg-white/[0.02] border border-indigo-500/15 rounded-2xl p-3 text-center hover:border-indigo-500/40 hover:bg-white/[0.05] transition-all duration-300 flex flex-col items-center justify-center"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform duration-300">
+                        <Icon
+                          size={15}
+                          className="text-indigo-300"
+                          strokeWidth={1.8}
+                        />
+                      </div>
+                      <h4 className="text-[12px] font-semibold text-white">
+                        {account.title}
+                      </h4>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
