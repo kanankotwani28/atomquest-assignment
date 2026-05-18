@@ -11,7 +11,7 @@ const QUARTER_LABELS = {
   Q4: "March / April",
 };
 
-export default function GoalCheckInCard({ goal, currentQuarter, onSaved, allowCheckinOutsideWindow = false }) {
+export default function GoalCheckInCard({ goal, currentQuarter, onSaved, allowCheckinOutsideWindow = false, checkinWindowOpen = false }) {
   const [activeQuarter, setActiveQuarter] = useState(currentQuarter || "Q1");
 
   const checkInMap = {};
@@ -30,8 +30,9 @@ export default function GoalCheckInCard({ goal, currentQuarter, onSaved, allowCh
 
   const latestCheckIn = checkinsArray.length ? checkinsArray[checkinsArray.length - 1] : null;
   const isPrimarySharedOwner = !goal.isShared || !goal.sharedFromId || goal.id === goal.sharedFromId;
+  const windowOpen = allowCheckinOutsideWindow || checkinWindowOpen;
   const canEditActiveQuarter =
-    isPrimarySharedOwner && (allowCheckinOutsideWindow ? true : !!currentQuarter && activeQuarter === currentQuarter);
+    isPrimarySharedOwner && (windowOpen ? true : !!currentQuarter && activeQuarter === currentQuarter);
 
   return (
     <div className="aq-card">

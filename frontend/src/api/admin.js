@@ -11,6 +11,8 @@ export const getCycles       = ()       => api.get("/admin/cycles");
 export const createCycle     = (data)   => api.post("/admin/cycles", data);
 export const activateCycle   = (id)     => api.post(`/admin/cycles/${id}/activate`);
 export const openQuarter     = (id, q)  => api.post(`/admin/cycles/${id}/open-quarter`, { quarter: q });
+export const toggleCheckinWindow = (id) => api.post(`/admin/cycles/${id}/toggle-window`);
+export const autoScheduleWindows = (id) => api.post(`/admin/cycles/${id}/auto-schedule`);
 
 // ── Shared goals ──────────────────────────────────────────────────
 export const pushSharedGoal = (data) => api.post("/admin/shared-goals", data);

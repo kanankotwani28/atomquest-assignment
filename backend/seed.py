@@ -42,7 +42,7 @@ def seed():
         db.add(Cycle(year=2025, phase="Goal Setting",
                      start_date=datetime(2025, 5, 1),
                      end_date=datetime(2026, 4, 30),
-                     is_active=True))
+                     is_active=True, checkin_window_open=True))
 
     db.commit()
     print("Seed complete — admin / manager / employee all use password: password123")

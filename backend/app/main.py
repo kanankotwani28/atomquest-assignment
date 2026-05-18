@@ -1,13 +1,29 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
+from sqlalchemy import text
+from app.database import Base, engine, SessionLocal
 from app.routers import auth, goals, checkins, admin, escalation
 from app.services.audit_logger import register_audit_listeners
 
-# Create all tables on startup if they don't exist
-# In production you'd use Alembic migrations instead
 Base.metadata.create_all(bind=engine)
+
 from app.models.models import EscalationRule, EscalationLog
+
+def run_pending_migrations():
+    db = SessionLocal()
+    try:
+        result = db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='cycles' AND column_name='checkin_window_open'"))
+        if not result.fetchone():
+            db.execute(text("ALTER TABLE cycles ADD COLUMN checkin_window_open BOOLEAN DEFAULT FALSE"))
+            db.commit()
+            print("Migration: added checkin_window_open column to cycles table")
+    except Exception as e:
+        print(f"Migration check failed: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+run_pending_migrations()
 
 app = FastAPI(
     title="AtomQuest Goal Portal",

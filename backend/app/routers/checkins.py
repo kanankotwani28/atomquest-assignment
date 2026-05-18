@@ -16,14 +16,6 @@ def get_active_cycle(db):
     if not c: raise HTTPException(404, "No active cycle")
     return c
 
-def get_current_quarter() -> str | None:
-    m = datetime.utcnow().month
-    if 7  <= m <= 9:  return "Q1"
-    if 10 <= m <= 12: return "Q2"
-    if 1  <= m <= 2:  return "Q3"
-    if 3  <= m <= 4:  return "Q4"
-    return None  # May/June is goal-setting phase; no check-in window.
-
 def upsert_checkin_record(db, goal, body, score):
     existing = db.query(CheckIn).filter(
         CheckIn.goal_id == goal.id,
@@ -62,18 +54,17 @@ def upsert_checkin(body: CheckInCreate,
     if goal.status != GoalStatusEnum.APPROVED:
         raise HTTPException(400, "Check-ins only allowed on approved goals")
 
-    current_quarter = get_current_quarter()
-    # Allow bypass in dev/testing via env flag
+    current_quarter = get_active_cycle(db).current_quarter
     if not settings.allow_checkin_outside_window:
-        if current_quarter is None:
-            raise HTTPException(400, "Check-in window is closed. May/June is goal-setting phase.")
-        if body.quarter != current_quarter:
+        cycle = get_active_cycle(db)
+        if not cycle.checkin_window_open:
+            raise HTTPException(400, "Check-in window is closed. Admin has not opened it.")
+        if cycle.current_quarter and body.quarter != cycle.current_quarter:
             raise HTTPException(
                 400,
-                f"{body.quarter} check-in is not open. Current open window is {current_quarter}."
+                f"{body.quarter} check-in is not open. Current open window is {cycle.current_quarter}."
             )
     else:
-        # In permissive mode, accept the requested quarter if provided
         current_quarter = body.quarter or current_quarter
 
     score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
@@ -117,7 +108,8 @@ def get_my_checkins(db: Session = Depends(get_db),
                .all())
     return {
         "goals": goals,
-        "currentQuarter": get_current_quarter(),
+        "currentQuarter": cycle.current_quarter,
+        "checkinWindowOpen": cycle.checkin_window_open,
         "cycle": cycle,
         "allowCheckinOutsideWindow": settings.allow_checkin_outside_window
     }
@@ -158,7 +150,8 @@ def get_team_checkins(db: Session = Depends(get_db),
             "overallScore": overall
         })
 
-    return {"team": team, "cycle": cycle, "currentQuarter": get_current_quarter()}
+    return {"team": team, "cycle": cycle, "currentQuarter": cycle.current_quarter,
+            "checkinWindowOpen": cycle.checkin_window_open}
 
 # ── Manager: add comment ──────────────────────────────────────────
 @router.put("/{checkin_id}/comment")

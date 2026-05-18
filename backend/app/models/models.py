@@ -68,14 +68,15 @@ class ThrustArea(Base):
 class Cycle(Base):
     __tablename__ = "cycles"
 
-    id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    year       = Column(Integer, nullable=False)
-    phase      = Column(String, nullable=False)
-    start_date = Column(DateTime, nullable=False)
-    end_date   = Column(DateTime, nullable=False)
-    is_active  = Column(Boolean, default=False)
-    current_quarter = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    year               = Column(Integer, nullable=False)
+    phase              = Column(String, nullable=False)
+    start_date         = Column(DateTime, nullable=False)
+    end_date           = Column(DateTime, nullable=False)
+    is_active          = Column(Boolean, default=False)
+    current_quarter    = Column(String, nullable=True)
+    checkin_window_open = Column(Boolean, default=False)
+    created_at         = Column(DateTime, default=datetime.utcnow)
 
     goals = relationship("Goal", back_populates="cycle")
 

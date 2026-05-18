@@ -9,6 +9,7 @@ export default function EmployeeCheckIns() {
   const { user, logout } = useAuth();
   const [goals, setGoals] = useState([]);
   const [currentQuarter, setCurrentQuarter] = useState(null);
+  const [checkinWindowOpen, setCheckinWindowOpen] = useState(false);
   const [cycle, setCycle] = useState(null);
   const [allowCheckinOutsideWindow, setAllowCheckinOutsideWindow] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,7 @@ export default function EmployeeCheckIns() {
       const res = await getMyCheckIns();
       setGoals(res.data.goals);
       setCurrentQuarter(res.data.currentQuarter);
+      setCheckinWindowOpen(res.data.checkinWindowOpen || false);
       setAllowCheckinOutsideWindow(res.data.allowCheckinOutsideWindow || false);
       setCycle(res.data.cycle);
     } catch {
@@ -39,16 +41,21 @@ export default function EmployeeCheckIns() {
     );
   }
 
-  const subtitle = `${allowCheckinOutsideWindow ? "Dev Mode: check-ins allowed outside window" : currentQuarter ? `${currentQuarter} window is open` : "No active check-in window"}${cycle ? ` · ${cycle.year}` : ""}`;
+  const subtitle = allowCheckinOutsideWindow
+    ? "Dev Mode: check-ins allowed outside window"
+    : checkinWindowOpen && currentQuarter
+    ? `${currentQuarter} window is open`
+    : "Check-in window is controlled by admin";
+  const showClosedNotice = !allowCheckinOutsideWindow && !checkinWindowOpen;
 
   return (
     <AppShell user={user} logout={logout} title="Quarterly Check-ins" subtitle={subtitle}>
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
       <div className="space-y-6">
-        {!currentQuarter && !allowCheckinOutsideWindow && (
+        {showClosedNotice && (
           <div className="notice-bar amber">
-            Check-in window is currently closed. Q1 opens in July · Q2 in October · Q3 in January · Q4 / Annual in March-April
+            Check-in window is currently closed. Contact your administrator to open a check-in window.
           </div>
         )}
 
@@ -70,6 +77,7 @@ export default function EmployeeCheckIns() {
                 goal={goal}
                 currentQuarter={currentQuarter}
                 allowCheckinOutsideWindow={allowCheckinOutsideWindow}
+                checkinWindowOpen={checkinWindowOpen}
                 onSaved={fetchData}
               />
             ))}

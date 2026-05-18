@@ -22,6 +22,9 @@ import {
   unlockGoal,
   updateUserManager,
   startCompletionStream,
+  openQuarter,
+  toggleCheckinWindow,
+  autoScheduleWindows,
 } from "../../api/admin";
 
 const UOM_OPTIONS = [
@@ -132,6 +135,36 @@ export default function AdminDashboard() {
       await refresh();
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to activate cycle");
+    }
+  };
+
+  const handleOpenQuarter = async (cycleId, quarter) => {
+    try {
+      const res = await openQuarter(cycleId, quarter);
+      toast.success(res.data.message);
+      await refresh();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to open quarter");
+    }
+  };
+
+  const handleToggleWindow = async (cycleId) => {
+    try {
+      const res = await toggleCheckinWindow(cycleId);
+      toast.success(res.data.message);
+      await refresh();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to toggle window");
+    }
+  };
+
+  const handleAutoSchedule = async (cycleId) => {
+    try {
+      const res = await autoScheduleWindows(cycleId);
+      toast.success(res.data.message);
+      await refresh();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to auto-schedule");
     }
   };
 
@@ -323,6 +356,26 @@ export default function AdminDashboard() {
         {/* Tab 2: Cycles Management */}
         {activeTab === "cycles" && (
           <div className="space-y-6">
+            {/* BRD Schedule Reference */}
+            <div className="aq-card p-5">
+              <h3 className="text-xs font-semibold text-[#909090] uppercase tracking-[0.06em] mb-4">Check-in Schedule (BRD Reference)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { period: "Phase 1 — Goal Setting", window: "1st May", action: "Goal Creation, Submission & Approval" },
+                  { period: "Q1 Check-in", window: "July", action: "Progress Update — Planned vs. Actual" },
+                  { period: "Q2 Check-in", window: "October", action: "Progress Update — Planned vs. Actual" },
+                  { period: "Q3 Check-in", window: "January", action: "Progress Update — Planned vs. Actual" },
+                  { period: "Q4 / Annual", window: "March / April", action: "Final Achievement Capture" },
+                ].map((item) => (
+                  <div key={item.period} className="border border-[#222222] bg-[#0d0d0d] rounded-lg p-3">
+                    <p className="text-xs font-medium text-[#f5f5f5]">{item.period}</p>
+                    <p className="text-[10px] text-[#4d9966] mt-1">Opens: {item.window}</p>
+                    <p className="text-[10px] text-[#555555] mt-1">{item.action}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-4">
               {cycles.map((cycle) => (
                 <div
@@ -340,17 +393,67 @@ export default function AdminDashboard() {
                       <p className="micro text-[#555555] mt-1.5">
                         Window: {new Date(cycle.start_date).toLocaleDateString()} to {new Date(cycle.end_date).toLocaleDateString()}
                       </p>
+                      {cycle.is_active && (
+                        <div className="flex items-center gap-3 mt-3">
+                          <span className={`text-xs font-medium ${cycle.checkin_window_open ? "text-[#4d9966]" : "text-[#c44a4a]"}`}>
+                            {cycle.checkin_window_open ? "Check-in window: OPEN" : "Check-in window: CLOSED"}
+                          </span>
+                          {cycle.checkin_window_open && cycle.current_quarter && (
+                            <span className="text-xs text-[#909090]">
+                              Active Quarter: <span className="text-[#e8e8e8] font-medium">{cycle.current_quarter}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {cycle.is_active ? (
-                      <span className="status-badge status-approved">Active</span>
-                    ) : (
-                      <button
-                        onClick={() => handleActivateCycle(cycle.id)}
-                        className="btn text-xs py-1"
-                      >
-                        Activate
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {cycle.is_active && (
+                        <>
+                          <div className="flex gap-1">
+                            {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                              <button
+                                key={q}
+                                onClick={() => handleOpenQuarter(cycle.id, q)}
+                                className={`btn text-xs py-1 px-2 ${
+                                  cycle.current_quarter === q ? "btn-confirm" : ""
+                                }`}
+                              >
+                                {q}
+                              </button>
+                            ))}
+                            {cycle.current_quarter && (
+                              <button
+                                onClick={() => handleOpenQuarter(cycle.id, null)}
+                                className="btn text-xs py-1 px-2"
+                              >
+                                Close
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleToggleWindow(cycle.id)}
+                            className={`btn text-xs py-1 ${cycle.checkin_window_open ? "btn-danger" : "btn-confirm"}`}
+                          >
+                            {cycle.checkin_window_open ? "Close Window" : "Open Window"}
+                          </button>
+                          <button
+                            onClick={() => handleAutoSchedule(cycle.id)}
+                            className="btn text-xs py-1"
+                            title="Auto-schedule windows per BRD"
+                          >
+                            BRD Schedule
+                          </button>
+                        </>
+                      )}
+                      {!cycle.is_active && (
+                        <button
+                          onClick={() => handleActivateCycle(cycle.id)}
+                          className="btn text-xs py-1"
+                        >
+                          Activate
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

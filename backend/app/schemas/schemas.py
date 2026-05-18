@@ -36,9 +36,12 @@ class ThrustAreaOut(BaseModel):
 
 # ── Cycles ──────────────────────────────────────────────────────────
 class CycleOut(BaseModel):
-    id:     UUID4
-    year:   int
-    phase:  str  # e.g., "Q1", "H1"
+    id:                UUID4
+    year:              int
+    phase:             str
+    is_active:         bool = False
+    current_quarter:   Optional[str] = None
+    checkin_window_open: bool = False
     class Config:
         from_attributes = True
 

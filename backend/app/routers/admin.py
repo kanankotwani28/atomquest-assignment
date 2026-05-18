@@ -528,10 +528,62 @@ def open_quarter(cycle_id: str, payload: dict,
     if not cycle:
         raise HTTPException(404, "Cycle not found")
     cycle.current_quarter = quarter
+    cycle.checkin_window_open = quarter is not None
     db.commit()
     if quarter:
-        return {"message": f"{quarter} check-in window is now OPEN"}
-    return {"message": "All check-in windows are now CLOSED"}
+        return {"message": f"{quarter} check-in window is now OPEN", "checkin_window_open": True}
+    return {"message": "All check-in windows are now CLOSED", "checkin_window_open": False}
+
+@router.post("/cycles/{cycle_id}/toggle-window")
+def toggle_checkin_window(cycle_id: str,
+                           db: Session = Depends(get_db),
+                           _=Depends(require_role(RoleEnum.ADMIN))):
+    cycle = db.query(Cycle).filter(Cycle.id == cycle_id).first()
+    if not cycle:
+        raise HTTPException(404, "Cycle not found")
+    cycle.checkin_window_open = not cycle.checkin_window_open
+    db.commit()
+    status = "OPEN" if cycle.checkin_window_open else "CLOSED"
+    return {"message": f"Check-in window is now {status}", "checkin_window_open": cycle.checkin_window_open}
+
+BRD_WINDOW_MAP = {
+    "Q1": {"month": 7, "day": 1, "label": "Q1 (July)"},
+    "Q2": {"month": 10, "day": 1, "label": "Q2 (October)"},
+    "Q3": {"month": 1, "day": 1, "label": "Q3 (January)"},
+    "Q4": {"month": 3, "day": 1, "label": "Q4 (March/April)"},
+}
+
+@router.post("/cycles/{cycle_id}/auto-schedule")
+def auto_schedule_windows(cycle_id: str,
+                           db: Session = Depends(get_db),
+                           _=Depends(require_role(RoleEnum.ADMIN))):
+    cycle = db.query(Cycle).filter(Cycle.id == cycle_id).first()
+    if not cycle:
+        raise HTTPException(404, "Cycle not found")
+
+    cycle_year = cycle.year
+    windows = {}
+    for q, cfg in BRD_WINDOW_MAP.items():
+        m = cfg["month"]
+        y = cycle_year if m >= 5 else cycle_year + 1
+        windows[q] = datetime(y, m, cfg["day"])
+
+    cycle.current_quarter = "Q1"
+    cycle.checkin_window_open = True
+    db.commit()
+    db.refresh(cycle)
+
+    return {
+        "message": "Cycle auto-scheduled per BRD check-in windows",
+        "current_quarter": "Q1",
+        "checkin_window_open": True,
+        "windows": {
+            "Q1": {"opens": "1st July", "closes": "30th September"},
+            "Q2": {"opens": "1st October", "closes": "31st December"},
+            "Q3": {"opens": "1st January", "closes": "28th February"},
+            "Q4": {"opens": "1st March", "closes": "30th April"},
+        }
+    }
 
 # ── Users / Org ───────────────────────────────────────────────────
 @router.get("/users")
