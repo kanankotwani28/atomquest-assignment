@@ -160,37 +160,31 @@ def submit_all(db: Session = Depends(get_db),
                current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
     cycle = get_active_cycle(db)
 
-    # FIXED: include RETURNED goals — employee may resubmit after rework
     submittable = db.query(Goal).filter(
-        Goal.owner_id == current_user.id,
-        Goal.cycle_id == cycle.id,
-        Goal.status.in_([GoalStatusEnum.DRAFT, GoalStatusEnum.RETURNED, GoalStatusEnum.REVISION_REQUIRED])
-    ).all()
-
-    if not submittable:
-        raise HTTPException(
-            status_code=400,
-            detail="No draft or returned goals to submit"
-        )
-
-    # Check total weightage across ALL non-approved goals
-    # Include already-submitted goals in the weightage total
-    all_active_goals = db.query(Goal).filter(
         Goal.owner_id == current_user.id,
         Goal.cycle_id == cycle.id,
         Goal.status.in_([
             GoalStatusEnum.DRAFT,
-            GoalStatusEnum.SUBMITTED,
             GoalStatusEnum.RETURNED,
             GoalStatusEnum.REVISION_REQUIRED
         ])
     ).all()
 
-    total = sum(g.weightage for g in all_active_goals)
-    if round(total) != 100:
+    if not submittable:
+        raise HTTPException(400, "No draft or returned goals to submit")
+
+    # Total must include ALL goals — including already-approved shared goals
+    all_goals = db.query(Goal).filter(
+        Goal.owner_id == current_user.id,
+        Goal.cycle_id == cycle.id
+    ).all()
+
+    total = round(float(sum(g.weightage for g in all_goals)), 1)
+    if total != 100:
         raise HTTPException(
-            status_code=400,
-            detail=f"Total weightage is {total}%. Must equal exactly 100% before submission."
+            400,
+            detail=f"Total weightage is {total}% (including approved shared goals). "
+                   f"Must equal exactly 100% before submission."
         )
 
     for g in submittable:
@@ -339,33 +333,33 @@ def approve_goals(payload: dict,
                   current_user: User = Depends(require_role(RoleEnum.MANAGER))):
     employee_id = payload.get("employeeId")
     if not employee_id:
-        raise HTTPException(status_code=400, detail="employeeId required")
+        raise HTTPException(400, "employeeId required")
 
     employee = db.query(User).filter(
         User.id == employee_id,
         User.manager_id == current_user.id
     ).first()
     if not employee:
-        raise HTTPException(status_code=403, detail="Employee not in your team")
+        raise HTTPException(403, "Employee not in your team")
 
     cycle = get_active_cycle(db)
 
-    # Check no goals are still RETURNED or DRAFT — must all be SUBMITTED
     blocking_goals = db.query(Goal).filter(
         Goal.owner_id == employee_id,
         Goal.cycle_id == cycle.id,
-        Goal.status.in_([GoalStatusEnum.RETURNED, GoalStatusEnum.DRAFT, GoalStatusEnum.REVISION_REQUIRED])
+        Goal.status.in_([
+            GoalStatusEnum.RETURNED,
+            GoalStatusEnum.DRAFT,
+            GoalStatusEnum.REVISION_REQUIRED
+        ])
     ).all()
 
     if blocking_goals:
         blocking_titles = [g.title for g in blocking_goals]
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot approve — {len(blocking_goals)} goal(s) still need resubmission: "
-                   f"{', '.join(blocking_titles)}"
-        )
+        raise HTTPException(400,
+            detail=f"Cannot approve — {len(blocking_goals)} goal(s) still need "
+                   f"resubmission: {', '.join(blocking_titles)}")
 
-    # Now fetch only submitted goals
     submitted = db.query(Goal).filter(
         Goal.owner_id == employee_id,
         Goal.cycle_id == cycle.id,
@@ -373,15 +367,19 @@ def approve_goals(payload: dict,
     ).all()
 
     if not submitted:
-        raise HTTPException(status_code=400, detail="No submitted goals to approve")
+        raise HTTPException(400, "No submitted goals to approve")
 
-    # Final weightage check
-    total = sum(g.weightage for g in submitted)
-    if round(total) != 100:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot approve — total weightage is {total}%, must be 100%"
-        )
+    # Check total across ALL goals including already-approved shared goals
+    all_goals = db.query(Goal).filter(
+        Goal.owner_id == employee_id,
+        Goal.cycle_id == cycle.id
+    ).all()
+
+    total = round(float(sum(g.weightage for g in all_goals)), 1)
+    if total != 100:
+        raise HTTPException(400,
+            detail=f"Cannot approve — total weightage across all goals "
+                   f"(including shared) is {total}%, must be 100%")
 
     now = datetime.utcnow()
     for g in submitted:
