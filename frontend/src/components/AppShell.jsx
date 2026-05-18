@@ -4,50 +4,43 @@ import {
   Target,
   ClipboardCheck,
   Users,
-  CheckSquare,
-  RefreshCw,
-  Share2,
   TrendingUp,
   History,
   Lock,
+  RefreshCw,
+  Share2,
 } from "lucide-react";
 
 const MENU = {
   EMPLOYEE: [
-    { label: "My Goals", to: "/employee/dashboard" },
+    { label: "My Goals",  to: "/employee/dashboard" },
     { label: "Check-ins", to: "/employee/checkins" },
   ],
   MANAGER: [
-    { label: "Team Overview", to: "/manager/dashboard" },
-    { label: "Team Check-ins", to: "/manager/checkins" },
+    { label: "Team Overview",  to: "/manager/dashboard" },
+    { label: "Team Check-ins",to: "/manager/checkins" },
   ],
   ADMIN: [
-    { label: "Overview", to: "/admin/dashboard" },
+    { label: "Overview",      to: "/admin/dashboard" },
   ],
 };
 
 const ICON_MAP = {
-  "Dashboard": LayoutDashboard,
-  "My Goals": Target,
-  "Check-ins": ClipboardCheck,
-  "Team Overview": Users,
-  "Goal Approvals": CheckSquare,
-  "Team Check-ins": ClipboardCheck,
-  "Overview": LayoutDashboard,
-  "Cycles": RefreshCw,
-  "Shared Goals": Share2,
-  "Completion": TrendingUp,
-  "Audit Trail": History,
-  "Unlock Goals": Lock,
+  "My Goals":         Target,
+  "Check-ins":        ClipboardCheck,
+  "Team Overview":    Users,
+  "Team Check-ins":   ClipboardCheck,
+  "Overview":         LayoutDashboard,
+  "Cycles":           RefreshCw,
+  "Shared Goals":     Share2,
+  "Completion":        TrendingUp,
+  "Audit Trail":      History,
+  "Unlock Goals":    Lock,
 };
 
 function initials(name = "") {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "AQ";
+  return name.split(" ").filter(Boolean).slice(0, 2)
+    .map((p) => p[0]?.toUpperCase()).join("") || "AQ";
 }
 
 export default function AppShell({ user, logout, title, subtitle, actions, children }) {
@@ -58,7 +51,7 @@ export default function AppShell({ user, logout, title, subtitle, actions, child
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-mark">A</div>
-          <div className="flex flex-col">
+          <div>
             <span className="sidebar-title">AtomQuest</span>
             <span className="sidebar-version">v1.0</span>
           </div>
@@ -73,7 +66,7 @@ export default function AppShell({ user, logout, title, subtitle, actions, child
                 to={item.to}
                 className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
               >
-                <Icon size={15} strokeWidth={1.5} className="nav-icon" />
+                <Icon size={15} strokeWidth={1.75} className="nav-icon" />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -81,15 +74,14 @@ export default function AppShell({ user, logout, title, subtitle, actions, child
         </nav>
 
         <div className="sidebar-user">
-          <div className="border-t border-[#1a1a1a] my-1" />
-          <div className="sidebar-user-info mt-2">
+          <div className="sidebar-user-info">
             <div className="avatar">{initials(user?.name)}</div>
             <div className="min-w-0 flex-1">
               <div className="user-name">{user?.name}</div>
-              <div className="role-badge-pill mt-0.5">{user?.role}</div>
+              <div className="role-badge-pill">{user?.role}</div>
             </div>
           </div>
-          <button onClick={logout} className="signout-btn mt-2">
+          <button onClick={logout} className="signout-btn">
             Sign out
           </button>
         </div>

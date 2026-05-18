@@ -1,13 +1,7 @@
 export default function WeightageBar({ goals }) {
-  const total = goals.reduce((sum, g) => sum + g.weightage, 0);
+  const total     = goals.reduce((sum, g) => sum + g.weightage, 0);
   const remaining = Math.max(0, 100 - total);
 
-  // Bar color follows progress bar rules:
-  // 100% exactly:   fill #4d9966 (excellent)
-  // > 100%:         fill #c44a4a (poor)
-  // 75-99%:         fill #4a7ac4 (good)
-  // 50-74%:         fill #c49a2a (warn)
-  // < 50%:          fill #c44a4a (poor)
   const getFillClass = (t) => {
     if (Math.round(t) === 100) return "excellent";
     if (t > 100) return "poor";
@@ -17,28 +11,26 @@ export default function WeightageBar({ goals }) {
   };
 
   const fillClass = getFillClass(total);
+  const pct = Math.min(total, 100);
 
   return (
-    <div className="aq-card">
-      <div className="flex items-center justify-between gap-6">
+    <div className="aq-card p-5">
+      <div className="flex items-center justify-between gap-6 mb-3">
         <div className="flex-1">
           <div className="progress-track thick">
-            <div
-              className={`progress-fill ${fillClass}`}
-              style={{ width: `${Math.min(total, 100)}%` }}
-            />
+            <div className={`progress-fill ${fillClass}`} style={{ width: `${pct}%` }} />
           </div>
         </div>
-        <div className="number-medium flex-shrink-0">
-          {total.toFixed(1)}% / 100%
-        </div>
+        <p className="number-medium whitespace-nowrap" style={{ color: Math.round(total) === 100 ? "var(--score-excellent)" : total > 100 ? "var(--score-poor)" : "var(--text-primary)" }}>
+          {total.toFixed(1)}%
+        </p>
       </div>
-
-      <div className="mt-2 flex items-center justify-between">
-        <span className="micro">
-          {goals.length} of 8 goals · {total > 100 ? `Exceeds by ${(total - 100).toFixed(1)}%` : `${remaining.toFixed(1)}% remaining`}
-        </span>
-      </div>
+      <p className="micro">
+        {goals.length} of 8 goals ·{" "}
+        {total > 100
+          ? `Exceeds by ${(total - 100).toFixed(1)}%`
+          : `${remaining.toFixed(1)}% remaining`}
+      </p>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { getMyCheckIns } from "../../api/checkins";
 import AppShell from "../../components/AppShell";
 import GoalCheckInCard from "../../components/GoalCheckInCard";
 import { Toaster } from "react-hot-toast";
+import { ClipboardCheck } from "lucide-react";
 
 export default function EmployeeCheckIns() {
   const { user, logout } = useAuth();
@@ -22,60 +23,53 @@ export default function EmployeeCheckIns() {
       setCheckinWindowOpen(res.data.checkinWindowOpen || false);
       setAllowCheckinOutsideWindow(res.data.allowCheckinOutsideWindow || false);
       setCycle(res.data.cycle);
-    } catch {
-      // Empty state below covers unavailable check-ins.
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* empty state below */ }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="skeleton h-4 w-44 rounded" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--surface-base)" }}>
+      <div className="skeleton h-4 w-44 rounded" />
+    </div>
+  );
 
   const subtitle = allowCheckinOutsideWindow
-    ? "Dev Mode: check-ins allowed outside window"
+    ? "Dev mode — check-ins allowed outside window"
     : checkinWindowOpen && currentQuarter
     ? `${currentQuarter} window is open`
     : "Check-in window is controlled by admin";
-  const showClosedNotice = !allowCheckinOutsideWindow && !checkinWindowOpen;
+  const showClosed = !allowCheckinOutsideWindow && !checkinWindowOpen;
 
   return (
     <AppShell user={user} logout={logout} title="Quarterly Check-ins" subtitle={subtitle}>
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
       <div className="space-y-6">
-        {showClosedNotice && (
-          <div className="notice-bar amber">
-            Check-in window is currently closed. Contact your administrator to open a check-in window.
+        {showClosed && (
+          <div className="notice-bar amber text-sm">
+            Check-in window is currently closed — contact your administrator to open one.
           </div>
         )}
 
         {goals.length === 0 ? (
-          <div className="aq-card py-20 text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full border border-[#222222] bg-[#0d0d0d] flex items-center justify-center text-[#555555]">
-              !
+          <div className="aq-card py-20 text-center" style={{ background: "var(--surface-elevated)", borderStyle: "dashed" }}>
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl border border-white/[0.06] flex items-center justify-center"
+              style={{ background: "var(--surface-base)" }}>
+              <ClipboardCheck size={22} strokeWidth={1.25} style={{ color: "var(--text-disabled)" }} />
             </div>
-            <h3 className="mb-2 font-medium text-[#909090]">No approved goals yet</h3>
-            <p className="text-sm text-[#555555]">
+            <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+              No approved goals yet
+            </h3>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               Check-ins are available once your manager approves your goals.
             </p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-4">
             {goals.map((goal) => (
-              <GoalCheckInCard
-                key={goal.id}
-                goal={goal}
-                currentQuarter={currentQuarter}
+              <GoalCheckInCard key={goal.id} goal={goal} currentQuarter={currentQuarter}
                 allowCheckinOutsideWindow={allowCheckinOutsideWindow}
                 checkinWindowOpen={checkinWindowOpen}
                 onSaved={fetchData}
