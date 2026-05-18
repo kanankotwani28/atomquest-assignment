@@ -47,14 +47,23 @@ app = FastAPI(
     # Swagger UI available at /docs automatically
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+import os
+
+# Dynamic CORS origins configuration from environment
+allowed_origins_env = os.getenv("CORS_ORIGINS")
+if allowed_origins_env:
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+else:
+    allowed_origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://atomquest-assignment.vercel.app",
-    ],  # Vite frontend
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127.0.0.1:\d+",
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
