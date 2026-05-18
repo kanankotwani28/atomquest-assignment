@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
-from app.routers import auth, goals, checkins, admin
+from app.routers import auth, goals, checkins, admin, escalation
 from app.services.audit_logger import register_audit_listeners
 
 # Create all tables on startup if they don't exist
 # In production you'd use Alembic migrations instead
 Base.metadata.create_all(bind=engine)
+from app.models.models import EscalationRule, EscalationLog
 
 app = FastAPI(
     title="AtomQuest Goal Portal",
@@ -27,6 +28,7 @@ app.include_router(auth.router,     prefix="/api")
 app.include_router(goals.router,    prefix="/api")
 app.include_router(checkins.router, prefix="/api")
 app.include_router(admin.router,    prefix="/api")
+app.include_router(escalation.router, prefix="/api")
 
 # Register automatic audit listeners (safe to call multiple times)
 register_audit_listeners()

@@ -4,8 +4,10 @@ import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
 import AppShell from "../../components/AppShell";
 import ScoreBadge from "../../components/ScoreBadge";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, AlertTriangle } from "lucide-react";
 import Analytics from "./Analytics";
+import Escalation from "./Escalation";
+import { getEscalationSummary } from "../../api/escalation";
 import {
   activateCycle,
   createCycle,
@@ -59,6 +61,7 @@ export default function AdminDashboard() {
   const [cycleForm, setCycleForm] = useState(initialCycle);
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [hasActiveEscalations, setHasActiveEscalations] = useState(false);
 
   const employees = users.filter((u) => u.role === "EMPLOYEE");
   const managers = users.filter((u) => u.role === "MANAGER");
@@ -82,6 +85,7 @@ export default function AdminDashboard() {
       goalsRes,
       auditRes,
       thrustAreasRes,
+      escalationSummaryRes,
     ] = await Promise.all([
       getCompletionDashboard(),
       getCycles(),
@@ -89,6 +93,7 @@ export default function AdminDashboard() {
       getAdminGoals(),
       getAuditLogs(),
       getThrustAreas(),
+      getEscalationSummary().catch(() => ({ data: { total_active: 0 } })),
     ]);
 
     setCompletion(completionRes.data);
@@ -97,6 +102,7 @@ export default function AdminDashboard() {
     setGoals(goalsRes.data);
     setAuditLogs(auditRes.data);
     setThrustAreas(thrustAreasRes.data);
+    setHasActiveEscalations(escalationSummaryRes.data.total_active > 0);
   };
 
   useEffect(() => {
@@ -207,6 +213,7 @@ export default function AdminDashboard() {
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "analytics", label: "Analytics", icon: BarChart2 },
+    { id: "escalation", label: "Escalation", icon: AlertTriangle },
     { id: "cycles", label: "Cycles" },
     { id: "shared_goals", label: "Shared Goals" },
     { id: "completion", label: "Completion" },
@@ -243,12 +250,15 @@ export default function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`quarter-tab min-w-[90px] text-center flex items-center justify-center gap-1.5 ${
+                className={`quarter-tab min-w-[90px] text-center flex items-center justify-center gap-1.5 relative ${
                   activeTab === tab.id ? "active" : ""
                 }`}
               >
                 {Icon && <Icon size={14} strokeWidth={1.5} />}
                 <span>{tab.label}</span>
+                {tab.id === "escalation" && hasActiveEscalations && (
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#c44a4a] rounded-full" />
+                )}
               </button>
             );
           })}
@@ -306,6 +316,9 @@ export default function AdminDashboard() {
 
         {/* Tab: Analytics */}
         {activeTab === "analytics" && <Analytics />}
+
+        {/* Tab: Escalation */}
+        {activeTab === "escalation" && <Escalation />}
 
         {/* Tab 2: Cycles Management */}
         {activeTab === "cycles" && (

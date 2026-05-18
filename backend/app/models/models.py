@@ -74,6 +74,7 @@ class Cycle(Base):
     start_date = Column(DateTime, nullable=False)
     end_date   = Column(DateTime, nullable=False)
     is_active  = Column(Boolean, default=False)
+    current_quarter = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     goals = relationship("Goal", back_populates="cycle")
@@ -141,3 +142,38 @@ class AuditLog(Base):
     created_at   = Column(DateTime, default=datetime.utcnow)
 
     goal = relationship("Goal", back_populates="audit_logs")
+
+
+class EscalationRuleTypeEnum(str, enum.Enum):
+    GOAL_NOT_SUBMITTED  = "GOAL_NOT_SUBMITTED"
+    GOAL_NOT_APPROVED   = "GOAL_NOT_APPROVED"
+    CHECKIN_MISSED      = "CHECKIN_MISSED"
+
+
+class EscalationLevelEnum(str, enum.Enum):
+    EMPLOYEE  = "EMPLOYEE"
+    MANAGER   = "MANAGER"
+    HR        = "HR"
+
+
+class EscalationRule(Base):
+    __tablename__ = "escalation_rules"
+    id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    rule_type      = Column(SAEnum(EscalationRuleTypeEnum), nullable=False, unique=True)
+    threshold_days = Column(Integer, nullable=False, default=7)
+    is_active      = Column(Boolean, default=True)
+    created_at     = Column(DateTime, default=datetime.utcnow)
+    updated_at     = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EscalationLog(Base):
+    __tablename__ = "escalation_logs"
+    id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    employee_id    = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    rule_type      = Column(SAEnum(EscalationRuleTypeEnum), nullable=False)
+    level          = Column(SAEnum(EscalationLevelEnum), default=EscalationLevelEnum.EMPLOYEE)
+    triggered_at   = Column(DateTime, default=datetime.utcnow)
+    resolved_at    = Column(DateTime, nullable=True)
+    notes          = Column(String, nullable=True)
+    employee       = relationship("User", foreign_keys=[employee_id])
+
