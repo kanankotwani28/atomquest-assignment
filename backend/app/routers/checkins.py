@@ -23,11 +23,14 @@ def upsert_checkin_record(db, goal, body, score):
     ).first()
 
     if existing:
-        existing.actual          = body.actual
-        existing.completion_date = body.completion_date
-        existing.progress_status = body.progress_status
-        existing.score           = score
-        existing.updated_at      = datetime.utcnow()
+        if body.actual is not None:
+            existing.actual = body.actual
+        if body.completion_date is not None:
+            existing.completion_date = body.completion_date
+        if body.progress_status:
+            existing.progress_status = body.progress_status
+        existing.score = score
+        existing.updated_at = datetime.utcnow()
         return existing
 
     ci = CheckIn(
@@ -41,60 +44,58 @@ def upsert_checkin_record(db, goal, body, score):
     db.add(ci)
     return ci
 
-# ── Employee: upsert check-in 
+# ── Employee: upsert check-in
 @router.post("/")
 def upsert_checkin(body: CheckInCreate,
                    db: Session = Depends(get_db),
                    current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
-    goal = db.query(Goal).filter(Goal.id == str(body.goal_id)).first()
-    if not goal:
-        raise HTTPException(404, "Goal not found")
-    if str(goal.owner_id) != str(current_user.id):
-        raise HTTPException(403, "Not your goal")
-    if goal.status != GoalStatusEnum.APPROVED:
-        raise HTTPException(400, "Check-ins only allowed on approved goals")
+    try:
+        goal = db.query(Goal).filter(Goal.id == str(body.goal_id)).first()
+        if not goal:
+            raise HTTPException(404, "Goal not found")
+        if str(goal.owner_id) != str(current_user.id):
+            raise HTTPException(403, "Not your goal")
+        if goal.status != GoalStatusEnum.APPROVED:
+            raise HTTPException(400, "Check-ins only allowed on approved goals")
 
-    current_quarter = get_active_cycle(db).current_quarter
-    if not settings.allow_checkin_outside_window:
-        cycle = get_active_cycle(db)
-        if not cycle.checkin_window_open:
-            raise HTTPException(400, "Check-in window is closed. Admin has not opened it.")
-        if cycle.current_quarter and body.quarter != cycle.current_quarter:
-            raise HTTPException(
-                400,
-                f"{body.quarter} check-in is not open. Current open window is {cycle.current_quarter}."
-            )
-    else:
-        current_quarter = body.quarter or current_quarter
+        cycle_obj = get_active_cycle(db)
+        current_quarter = cycle_obj.current_quarter
+        if not settings.allow_checkin_outside_window:
+            if not cycle_obj.checkin_window_open:
+                raise HTTPException(400, "Check-in window is closed. Admin has not opened it.")
+            if cycle_obj.current_quarter and body.quarter != cycle_obj.current_quarter:
+                raise HTTPException(
+                    400,
+                    f"{body.quarter} check-in is not open. Current open window is {cycle_obj.current_quarter}."
+                )
+        else:
+            current_quarter = body.quarter or current_quarter
 
-    score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
+        score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
 
-    if goal.is_shared and goal.shared_from_id:
-        if str(goal.id) != str(goal.shared_from_id):
-            raise HTTPException(
-                403,
-                "Shared KPI achievement updates can be entered only by the primary owner."
-            )
+        if goal.is_shared and goal.shared_from_id:
+            if str(goal.id) != str(goal.shared_from_id):
+                raise HTTPException(403, "Shared KPI achievement updates can be entered only by the primary owner.")
 
-    saved = upsert_checkin_record(db, goal, body, score)
+        saved = upsert_checkin_record(db, goal, body, score)
 
-    if goal.is_shared and goal.shared_from_id:
-        linked_goals = db.query(Goal).filter(
-            Goal.shared_from_id == goal.shared_from_id,
-            Goal.id != goal.id
-        ).all()
-        for linked_goal in linked_goals:
-            linked_score = calculate_score(
-                linked_goal.uom_type,
-                linked_goal.target,
-                body.actual,
-                body.completion_date
-            )
-            upsert_checkin_record(db, linked_goal, body, linked_score)
+        if goal.is_shared and goal.shared_from_id:
+            linked_goals = db.query(Goal).filter(
+                Goal.shared_from_id == goal.shared_from_id,
+                Goal.id != goal.id
+            ).all()
+            for linked_goal in linked_goals:
+                linked_score = calculate_score(linked_goal.uom_type, linked_goal.target, body.actual, body.completion_date)
+                upsert_checkin_record(db, linked_goal, body, linked_score)
 
-    db.commit()
-    db.refresh(saved)
-    return saved
+        db.commit()
+        db.refresh(saved)
+        return saved
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, str(e))
 
 # ── Employee: get my check-ins ────────────────────────────────────
 @router.get("/my")

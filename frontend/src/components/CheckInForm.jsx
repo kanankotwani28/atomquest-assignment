@@ -28,18 +28,20 @@ const formatTargetValue = (target, uom) => {
 };
 
 export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, canEdit = true }) {
+  const uom = goal.uomType || goal.uom_type;
+  const isTimeline = uom === "TIMELINE";
+
   const [actual, setActual] = useState(existingCheckIn?.actual ?? "");
-  const [completionDate, setCompletionDate] = useState(
-    existingCheckIn?.completionDate || existingCheckIn?.completion_date
-      ? new Date(existingCheckIn?.completionDate || existingCheckIn?.completion_date).toISOString().split("T")[0]
-      : "",
-  );
+  const [completionDate, setCompletionDate] = useState(() => {
+    const raw = existingCheckIn?.completionDate ?? existingCheckIn?.completion_date;
+    if (!raw) return "";
+    try { return new Date(raw).toISOString().split("T")[0]; }
+    catch { return raw; }
+  });
   const [progressStatus, setProgressStatus] = useState(
     existingCheckIn?.progressStatus || existingCheckIn?.progress_status || "NOT_STARTED",
   );
   const [saving, setSaving] = useState(false);
-
-  const uom = goal.uomType || goal.uom_type;
 
   const previewScore = () => {
     if (uom === "ZERO") return actual === "" ? null : parseFloat(actual) === 0 ? 100 : 0;
@@ -49,7 +51,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
     if (uom === "TIMELINE") {
       if (!completionDate) return null;
       const deadline = new Date(goal.target);
-      const completed = new Date(completionDate);
+      const completed = new Date(completionDate + "T00:00:00");
       if (completed <= deadline) return 100;
       const daysLate = (completed - deadline) / (1000 * 60 * 60 * 24);
       return parseFloat(Math.max(0, 100 - daysLate * 5).toFixed(2));
@@ -57,22 +59,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
     return null;
   };
 
-  const handleSave = async () => {
-    if (!canEdit) return;
-    const payload = {
-      goal_id: goal.id || goal._id, quarter,
-      actual: uom !== "TIMELINE" ? (actual === "" ? undefined : parseFloat(actual)) : undefined,
-      completion_date: uom === "TIMELINE" && completionDate ? new Date(completionDate).toISOString() : undefined,
-      progress_status: progressStatus,
-    };
-    setSaving(true);
-    try { await upsertCheckIn(payload); toast.success(`${quarter} check-in saved`); onSaved(); }
-    catch (err) { toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save"); }
-    finally { setSaving(false); }
-  };
-
   const liveScore = previewScore();
-  const isTimeline = uom === "TIMELINE";
   const scorePct = liveScore ?? existingCheckIn?.score ?? 0;
 
   const getProgressColor = (score) => {
@@ -83,6 +70,34 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
   };
 
   const fillColor = getProgressColor(scorePct);
+  const canSubmit = isTimeline ? !!completionDate : actual !== "";
+
+  const handleSave = async () => {
+    if (!canEdit || !canSubmit || saving) return;
+
+    const payload = {
+      goal_id: goal.id || goal._id,
+      quarter,
+      actual: isTimeline ? undefined : (actual === "" ? undefined : parseFloat(actual)),
+      completion_date: isTimeline && completionDate
+        ? (completionDate + "T12:00:00")
+        : undefined,
+      progress_status: progressStatus,
+    };
+
+    setSaving(true);
+    try {
+      await upsertCheckIn(payload);
+      toast.success(`${quarter} check-in saved`);
+      onSaved();
+    }
+    catch (err) {
+      toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save");
+    }
+    finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -97,9 +112,25 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           <span className="admin-label">{isTimeline ? "Completion Date" : "Actual Achievement"}</span>
           {isTimeline ? (
-            <input type="date" value={completionDate} onChange={(e) => setCompletionDate(e.target.value)} disabled={!canEdit} className="admin-input" style={{ fontSize: 12 }} />
+            <input
+              type="date"
+              value={completionDate}
+              onChange={(e) => setCompletionDate(e.target.value)}
+              disabled={!canEdit}
+              className="admin-input"
+              style={{ fontSize: 12 }}
+            />
           ) : (
-            <input type="number" step="any" value={actual} onChange={(e) => setActual(e.target.value)} disabled={!canEdit} placeholder={uom === "ZERO" ? "0" : "Enter actual value"} className="admin-input" style={{ fontSize: 12 }} />
+            <input
+              type="number"
+              step="any"
+              value={actual}
+              onChange={(e) => setActual(e.target.value)}
+              disabled={!canEdit}
+              placeholder={uom === "ZERO" ? "0" : "Enter actual value"}
+              className="admin-input"
+              style={{ fontSize: 12 }}
+            />
           )}
           <span style={{ fontSize: 10, color: "#475569" }}>
             {UOM_LABELS[uom]} · Target: {formatTargetValue(goal.target, uom)}
@@ -112,8 +143,26 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
             {PROGRESS_OPTIONS.map((opt) => {
               const isSelected = progressStatus === opt.value;
               return (
-                <button key={opt.value} type="button" disabled={!canEdit} onClick={() => setProgressStatus(opt.value)}
-                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 500, borderRadius: 6, border: "none", cursor: "pointer", transition: "all 150ms ease", background: isSelected ? "rgba(11,22,55,0.95)" : "transparent", color: isSelected ? "#fff" : "#475569" }}>
+                <button
+                  key={opt.value}
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => setProgressStatus(opt.value)}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    borderRadius: 6,
+                    border: "none",
+                    cursor: canEdit ? "pointer" : "not-allowed",
+                    transition: "all 150ms ease",
+                    background: isSelected ? "rgba(11,22,55,0.95)" : "transparent",
+                    color: isSelected ? "#fff" : "#475569",
+                  }}
+                >
                   {opt.label}
                 </button>
               );
@@ -136,8 +185,12 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
         </div>
       )}
 
-      <button onClick={handleSave} disabled={!canEdit || saving || (actual === "" && !completionDate)}
-        className="admin-btn admin-btn--primary" style={{ width: "100%", justifyContent: "center" }}>
+      <button
+        onClick={handleSave}
+        disabled={!canEdit || saving || !canSubmit}
+        className="admin-btn admin-btn--primary"
+        style={{ width: "100%", justifyContent: "center" }}
+      >
         {!canEdit ? "Check-in window closed" : saving ? "Saving..." : existingCheckIn ? "Update Check-in" : "Save Check-in"}
       </button>
     </div>

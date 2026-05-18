@@ -122,8 +122,10 @@ class CheckInCreate(BaseModel):
     goal_id:         UUID4
     quarter:         str    = Field(..., pattern="^Q[1-4]$")
     actual:          Optional[float] = None
-    completion_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = Field(None)
     progress_status: ProgressStatusEnum = ProgressStatusEnum.NOT_STARTED
+
+    model_config = {"arbitrary_types_allowed": True}
 
 class CommentAdd(BaseModel):
     comment: str = Field(..., min_length=1, max_length=1000)
