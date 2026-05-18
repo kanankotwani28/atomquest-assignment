@@ -25,14 +25,6 @@ def run_pending_migrations():
 
 run_pending_migrations()
 
-# Auto-seed database to ensure live deployed environments have demo data ready
-try:
-    from seed import seed
-    seed()
-    print("Auto-seeding: successfully checked/seeded default data.")
-except Exception as e:
-    print(f"Auto-seeding: check/seed failed: {e}")
-
 app = FastAPI(
     title="AtomQuest Goal Portal",
     description="Goal Setting & Tracking Portal API",

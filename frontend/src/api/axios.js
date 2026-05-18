@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  let url = import.meta.env.VITE_API_URL || 'https://atomquest-backend-qrr6.onrender.com/api';
+  if (url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  return url.endsWith('/api') ? url : `${url}/api`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://atomquest-backend-qrr6.onrender.com/api',
+  baseURL: getBaseURL(),
   maxRedirects: 0,
 });
 
