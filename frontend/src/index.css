@@ -1993,3 +1993,202 @@ select.admin-input {
 .animate-fade-in {
   animation: fadeIn 300ms ease-out forwards;
 }
+
+/* ─── Admin Mobile Responsive ──────────────────────────────────── */
+/* ───────────────── MOBILE RESPONSIVE FIXES ONLY ───────────────── */
+
+@media (max-width: 1024px) {
+  .app-shell {
+    padding-left: 0;
+  }
+
+  .sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .content-wrap,
+  .admin-content {
+    padding: 18px;
+  }
+
+  .admin-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .admin-nav-bar {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .admin-nav-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-brd-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-mgr-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-cols-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-table-wrap {
+    overflow-x: auto;
+  }
+
+  .aq-table,
+  .admin-table {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 22px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .number-large,
+  .admin-metric-val {
+    font-size: 28px;
+  }
+
+  .kpi-number {
+    font-size: 26px;
+  }
+
+  .admin-kpi-row,
+  .admin-metrics,
+  .admin-brd-grid,
+  .admin-mgr-grid,
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cycle-row,
+  .admin-emp-row,
+  .admin-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-cycle-controls,
+  .admin-emp-selector,
+  .admin-action-row {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
+
+  .admin-glass,
+  .aq-card,
+  .card,
+  .card-elevated,
+  .stat-card {
+    padding: 16px;
+  }
+
+  .modal-panel,
+  .admin-modal-panel {
+    max-width: 100%;
+    margin: 10px;
+  }
+
+  .btn,
+  .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tabs-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .quarter-tabs-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-wrap,
+  .admin-content {
+    padding: 12px;
+  }
+
+  .admin-topbar {
+    padding: 14px;
+  }
+
+  .admin-logo-text {
+    font-size: 15px;
+  }
+
+  .admin-logo-sub {
+    font-size: 10px;
+  }
+
+  .admin-nav-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .admin-kpi,
+  .admin-metric-card,
+  .admin-brd-item,
+  .admin-glass {
+    border-radius: 12px;
+  }
+
+  .admin-table th,
+  .admin-table td,
+  .aq-table th,
+  .aq-table td {
+    padding: 10px 12px;
+  }
+
+  .admin-modal-body,
+  .admin-modal-header,
+  .admin-modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
