@@ -9,19 +9,25 @@ db = SessionLocal()
 
 def seed():
     # ── Admin ──────────────────────────────────────────────────────
-    if not db.query(User).filter(User.email == "admin@atomquest.com").first():
+    admin = db.query(User).filter(User.email == "admin@atomquest.com").first()
+    if not admin:
         admin = User(name="Admin User", email="admin@atomquest.com",
                      password=hash_password("password123"), role=RoleEnum.ADMIN, department="HR")
         db.add(admin)
         db.flush()
+    else:
+        admin.password = hash_password("password123")
+        db.flush()
 
     # ── Manager ────────────────────────────────────────────────────
-    if not db.query(User).filter(User.email == "manager@atomquest.com").first():
+    manager = db.query(User).filter(User.email == "manager@atomquest.com").first()
+    if not manager:
         manager = User(name="Priya Sharma", email="manager@atomquest.com",
                        password=hash_password("password123"), role=RoleEnum.MANAGER, department="Sales")
         db.add(manager)
         db.flush()
     else:
+        manager.password = hash_password("password123")
         db.flush()
 
     manager = db.query(User).filter(User.email == "manager@atomquest.com").first()
@@ -32,9 +38,13 @@ def seed():
         ("Meera Patel",  "meera@atomquest.com",      "Sales"),
     ]
     for name, email, dept in employees:
-        if not db.query(User).filter(User.email == email).first():
+        emp = db.query(User).filter(User.email == email).first()
+        if not emp:
             db.add(User(name=name, email=email, password=hash_password("password123"),
                        role=RoleEnum.EMPLOYEE, department=dept, manager_id=manager.id))
+        else:
+            emp.password = hash_password("password123")
+            db.flush()
 
     # ── Thrust Areas ───────────────────────────────────────────────
     for name in ["Revenue Growth", "Cost Optimisation",
