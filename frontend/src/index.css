@@ -1994,13 +1994,331 @@ select.admin-input {
   animation: fadeIn 300ms ease-out forwards;
 }
 
-/* ─── Admin Mobile Responsive ──────────────────────────────────── */
-/* ───────────────── MOBILE RESPONSIVE FIXES ONLY ───────────────── */
+/* ─── AppShell Layout ──────────────────────────────────────────── */
+.appshell-root {
+  display: flex;
+  min-height: 100vh;
+  background: #020817;
+}
+
+.appshell-sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  background: rgba(7,18,38,0.95);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 50;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+.sidebar-close-btn {
+  display: none;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 150ms ease;
+}
+
+.sidebar-close-btn:hover {
+  color: #F8FAFC;
+  background: rgba(255,255,255,0.06);
+}
+
+.appshell-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 8px;
+}
+
+.appshell-brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3B82F6, #6366F1);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(59,130,246,0.28);
+  flex-shrink: 0;
+}
+
+.appshell-brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #F8FAFC;
+  letter-spacing: -0.02em;
+}
+
+.appshell-brand-sub {
+  font-size: 10px;
+  color: #475569;
+  letter-spacing: 0.03em;
+}
+
+.appshell-role-section {
+  padding: 0 18px 16px;
+}
+
+.appshell-role-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+.appshell-role-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.appshell-role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 6px rgba(16,185,129,0.4);
+}
+
+.appshell-role-dot[data-role="ADMIN"] {
+  background: #EF4444;
+  box-shadow: 0 0 6px rgba(239,68,68,0.4);
+}
+
+.appshell-role-dot[data-role="MANAGER"] {
+  background: #F59E0B;
+  box-shadow: 0 0 6px rgba(245,158,11,0.4);
+}
+
+.appshell-role-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #F8FAFC;
+}
+
+.appshell-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px;
+}
+
+.appshell-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 450;
+  color: #64748B;
+  text-decoration: none;
+  transition: all 150ms ease;
+  background: transparent;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+}
+
+.appshell-nav-item .appshell-nav-icon {
+  color: #475569;
+  flex-shrink: 0;
+  transition: color 150ms ease;
+}
+
+.appshell-nav-item:hover {
+  background: rgba(255,255,255,0.04);
+  color: #94A3B8;
+  border-color: rgba(255,255,255,0.06);
+}
+
+.appshell-nav-item:hover .appshell-nav-icon {
+  color: #64748B;
+}
+
+.appshell-nav-item--active {
+  color: #F8FAFC;
+  background: rgba(59,130,246,0.12);
+  border-color: rgba(96,165,250,0.25);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.appshell-nav-item--active .appshell-nav-icon {
+  color: #60A5FA;
+}
+
+.appshell-user-section {
+  padding: 16px 14px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.appshell-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.appshell-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #6366F1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.appshell-user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.appshell-user-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #F8FAFC;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appshell-user-email {
+  font-size: 10px;
+  color: #475569;
+}
+
+.appshell-signout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.appshell-signout-btn:hover {
+  background: rgba(239,68,68,0.08);
+  color: #EF4444;
+}
+
+.appshell-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 224px;
+}
+
+.appshell-header {
+  padding: 18px 32px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+  background: rgba(15,23,42,0.60);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.appshell-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.appshell-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.appshell-hamburger {
+  display: none;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.appshell-hamburger:hover {
+  background: rgba(255,255,255,0.05);
+  color: #F8FAFC;
+}
+
+.appshell-page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #F8FAFC;
+  letter-spacing: -0.02em;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appshell-header-sep {
+  color: #334155;
+  flex-shrink: 0;
+}
+
+.appshell-page-subtitle {
+  font-size: 12px;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.appshell-body {
+  flex: 1;
+  padding: 24px 32px;
+}
+
+/* ─── Admin + AppShell Mobile Responsive ───────────────────────── */
 
 @media (max-width: 1024px) {
-  .app-shell {
-    padding-left: 0;
-  }
+  .app-shell { padding-left: 0; }
 
   .sidebar {
     position: relative;
@@ -2018,14 +2336,10 @@ select.admin-input {
     scrollbar-width: none;
   }
 
-  .sidebar-nav::-webkit-scrollbar {
-    display: none;
-  }
+  .sidebar-nav::-webkit-scrollbar { display: none; }
 
   .content-wrap,
-  .admin-content {
-    padding: 18px;
-  }
+  .admin-content { padding: 18px; }
 
   .admin-topbar {
     flex-direction: column;
@@ -2040,65 +2354,80 @@ select.admin-input {
     scrollbar-width: none;
   }
 
-  .admin-nav-bar::-webkit-scrollbar {
-    display: none;
-  }
+  .admin-nav-bar::-webkit-scrollbar { display: none; }
 
-  .admin-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .admin-metrics { grid-template-columns: repeat(2, 1fr); }
+  .admin-brd-grid { grid-template-columns: repeat(2, 1fr); }
+  .admin-mgr-grid { grid-template-columns: repeat(2, 1fr); }
+  .admin-form-grid { grid-template-columns: repeat(2, 1fr); }
+  .admin-cols-2 { grid-template-columns: 1fr; }
 
-  .admin-brd-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .admin-mgr-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .admin-form-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .admin-cols-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-table-wrap {
-    overflow-x: auto;
-  }
+  .admin-table-wrap { overflow-x: auto; }
 
   .aq-table,
-  .admin-table {
-    min-width: 900px;
-  }
+  .admin-table { min-width: 900px; }
 }
 
 @media (max-width: 768px) {
-  .page-title {
-    font-size: 22px;
+  /* Sidebar → drawer */
+  .appshell-sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+    box-shadow: none;
   }
 
-  .section-title {
-    font-size: 16px;
+  .appshell-sidebar--open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.6);
   }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 45;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 200ms ease-out forwards;
+  }
+
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .appshell-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .appshell-main {
+    margin-left: 0;
+  }
+
+  .appshell-header {
+    padding: 14px 16px;
+  }
+
+  .appshell-page-title { font-size: 16px; }
+
+  .appshell-body { padding: 16px; }
+
+  .page-title { font-size: 22px; }
+  .section-title { font-size: 16px; }
 
   .number-large,
-  .admin-metric-val {
-    font-size: 28px;
-  }
+  .admin-metric-val { font-size: 28px; }
 
-  .kpi-number {
-    font-size: 26px;
-  }
+  .kpi-number { font-size: 26px; }
 
   .admin-kpi-row,
   .admin-metrics,
   .admin-brd-grid,
   .admin-mgr-grid,
-  .admin-form-grid {
-    grid-template-columns: 1fr;
-  }
+  .admin-form-grid { grid-template-columns: 1fr; }
 
   .admin-cycle-row,
   .admin-emp-row,
@@ -2120,9 +2449,7 @@ select.admin-input {
   .aq-card,
   .card,
   .card-elevated,
-  .stat-card {
-    padding: 16px;
-  }
+  .stat-card { padding: 16px; }
 
   .modal-panel,
   .admin-modal-panel {
@@ -2134,6 +2461,10 @@ select.admin-input {
   .admin-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .admin-btn--sm {
+    width: auto;
   }
 
   .tabs-row {
@@ -2149,22 +2480,21 @@ select.admin-input {
 }
 
 @media (max-width: 480px) {
-  .content-wrap,
-  .admin-content {
+  .appshell-body {
     padding: 12px;
   }
 
-  .admin-topbar {
-    padding: 14px;
+  .appshell-header {
+    padding: 12px;
   }
 
-  .admin-logo-text {
-    font-size: 15px;
-  }
+  .content-wrap,
+  .admin-content { padding: 12px; }
 
-  .admin-logo-sub {
-    font-size: 10px;
-  }
+  .admin-topbar { padding: 14px; }
+
+  .admin-logo-text { font-size: 15px; }
+  .admin-logo-sub { font-size: 10px; }
 
   .admin-nav-tab {
     padding: 8px 12px;
@@ -2174,16 +2504,12 @@ select.admin-input {
   .admin-kpi,
   .admin-metric-card,
   .admin-brd-item,
-  .admin-glass {
-    border-radius: 12px;
-  }
+  .admin-glass { border-radius: 12px; }
 
   .admin-table th,
   .admin-table td,
   .aq-table th,
-  .aq-table td {
-    padding: 10px 12px;
-  }
+  .aq-table td { padding: 10px 12px; }
 
   .admin-modal-body,
   .admin-modal-header,
@@ -2191,4 +2517,8 @@ select.admin-input {
     padding-left: 16px;
     padding-right: 16px;
   }
+
+  .appshell-page-title { font-size: 14px; }
+  .appshell-page-subtitle { display: none; }
+  .appshell-header-sep { display: none; }
 }

@@ -1,0 +1,36 @@
+services:
+  # ────────────────────────────────────────────────────────
+  # 1. FASTAPI BACKEND WEB SERVICE
+  # ────────────────────────────────────────────────────────
+  - type: web
+    name: atomquest-backend
+    runtime: python
+    plan: free
+    # Root directory is the repo root, but our Python app is in the backend/ folder
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: "10000"
+      # Automatically wire database connection string from Render PostgreSQL
+      - key: DATABASE_URL
+        fromDatabase:
+          name: atomquest-db
+          property: connectionString
+      # Let Render prompt for a secure JWT Secret or use a default fallback
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_HOURS
+        value: "8"
+      - key: ALLOW_CHECKIN_OUTSIDE_WINDOW
+        value: "false"
+
+# ────────────────────────────────────────────────────────
+# 2. MANAGED POSTGRESQL DATABASE
+# ────────────────────────────────────────────────────────
+databases:
+  - name: atomquest-db
+    plan: free
+    postgresMajorVersion: "15"

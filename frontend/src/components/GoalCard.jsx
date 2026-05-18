@@ -39,7 +39,7 @@ export default function GoalCard({ goal, onEdit, onDelete }) {
   const uom = goal.uomType || goal.uom_type;
 
   return (
-    <div className="admin-glass" style={{ borderLeft: `3px solid ${stripColor}` }}>
+    <div id={`goal-${goal.id || goal._id}`} className="admin-glass" style={{ borderLeft: `3px solid ${stripColor}` }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "#fff", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{goal.title}</h3>

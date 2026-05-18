@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { managerEditGoal } from "../api/manager";
 import toast from "react-hot-toast";
 
@@ -28,6 +28,18 @@ const STATUS_BADGE = {
   DRAFT:             "admin-badge admin-badge--draft",
 };
 
+/**
+ * Debounce helper — returns a ref-based debounced function.
+ * Delays invocation by `delay` ms after the last call.
+ */
+function useDebouncedCallback(fn, delay = 300) {
+  const timerRef = useRef(null);
+  return useCallback((...args) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => fn(...args), delay);
+  }, [fn, delay]);
+}
+
 export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
   const [saving, setSaving] = useState(false);
   const canEdit = goal.status === "SUBMITTED";
@@ -45,23 +57,32 @@ export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
     }
   };
 
-  const handleBlurTarget = async (e) => {
-    const val = parseFloat(e.target.value);
+  // Debounced blur handlers — prevent rapid API calls
+  const debouncedSaveTarget = useDebouncedCallback(async (val) => {
     if (isNaN(val) || val === goal.target) return;
     await saveEdit({ target: val });
-  };
+  }, 200);
 
-  const handleBlurWeightage = async (e) => {
-    const val = parseFloat(e.target.value);
+  const debouncedSaveWeightage = useDebouncedCallback(async (val) => {
     if (isNaN(val) || val < 10 || val > 100 || val === goal.weightage) {
       if (val < 10 || val > 100) toast.error("Weightage must be between 10% and 100%");
       return;
     }
     await saveEdit({ weightage: val });
+  }, 200);
+
+  const handleBlurTarget = (e) => {
+    const val = parseFloat(e.target.value);
+    debouncedSaveTarget(val);
+  };
+
+  const handleBlurWeightage = (e) => {
+    const val = parseFloat(e.target.value);
+    debouncedSaveWeightage(val);
   };
 
   return (
-    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+    <tr id={`goal-${goal.id || goal._id}`} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
       <td style={{ padding: "10px 12px" }}>
         <span style={{ fontSize: 12, fontWeight: 500, color: "#fff", maxWidth: 200, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{goal.title}</span>
       </td>
@@ -72,7 +93,6 @@ export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
           <input type="number" step="any" defaultValue={goal.target} onBlur={handleBlurTarget} disabled={saving}
             style={{ width: 80, padding: "3px 6px", background: "transparent", border: "1px solid transparent", borderRadius: 5, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#fff", outline: "none" }}
             onFocus={(e) => e.target.style.borderColor = "rgba(99,102,241,0.3)"}
-            onBlur={(e) => { handleBlurTarget(e); e.target.style.borderColor = "transparent"; }}
           />
         ) : (
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#94A3B8" }}>{formatTargetValue(goal.target, goal.uomType || goal.uom_type)}</span>
@@ -83,7 +103,6 @@ export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
           <input type="number" min="10" max="100" defaultValue={goal.weightage} onBlur={handleBlurWeightage} disabled={saving}
             style={{ width: 64, padding: "3px 6px", background: "transparent", border: "1px solid transparent", borderRadius: 5, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#fff", outline: "none" }}
             onFocus={(e) => e.target.style.borderColor = "rgba(99,102,241,0.3)"}
-            onBlur={(e) => { handleBlurWeightage(e); e.target.style.borderColor = "transparent"; }}
           />
         ) : (
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#94A3B8" }}>{goal.weightage}%</span>

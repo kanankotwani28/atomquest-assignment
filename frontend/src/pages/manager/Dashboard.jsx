@@ -7,7 +7,7 @@ import EmployeeGoalCard from "../../components/EmployeeGoalCard";
 import ReturnReasonModal from "../../components/ReturnReasonModal";
 import { SkeletonPage } from "../../components/Skeleton";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { Users, Send, ShieldAlert } from "lucide-react";
 import CycleCountdown from "../../components/CycleCountdown";
 
@@ -141,7 +141,7 @@ const [loading, setLoading]         = useState(true);
 
   return (
     <AppShell user={user} logout={logout} title="Manager Workspace" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"} actions={cycle && <CycleCountdown cycle={cycle} />}>
-      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
+
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 

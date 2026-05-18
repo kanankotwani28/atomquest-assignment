@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { getThrustAreas } from "../../api/goals";
 import {
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
   return (
     <div className="admin-page">
       <div className="admin-inner">
-        <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
+
 
         {/* ── Topbar ───────────────────────────────────────────── */}
         <div className="admin-topbar">

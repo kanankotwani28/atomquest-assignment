@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import {
   Lock,
   Mail,
@@ -95,7 +95,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#050F2A] text-white overflow-hidden relative">
-      <Toaster position="top-right" />
+
 
       {/* Background Glow */}
       <div className="absolute top-[-120px] left-[-100px] w-[300px] h-[300px] bg-indigo-600/20 blur-3xl rounded-full" />

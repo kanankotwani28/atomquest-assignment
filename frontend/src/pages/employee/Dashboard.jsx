@@ -1,45 +1,63 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   getMyGoals, getThrustAreas, getActiveCycle,
   createGoal, updateGoal, deleteGoal, submitAllGoals,
 } from "../../api/goals";
+import useData from "../../hooks/useData";
 import AppShell from "../../components/AppShell";
 import GoalCard from "../../components/GoalCard";
 import GoalFormModal from "../../components/GoalFormModal";
 import WeightageBar from "../../components/WeightageBar";
 import { SkeletonPage } from "../../components/Skeleton";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { Target, Plus, Send, CheckCircle2, AlertTriangle } from "lucide-react";
 import CycleCountdown from "../../components/CycleCountdown";
 
 export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
+
+  // Premium SWR caching hooks
+  const { data: cachedGoals, loading: loadingGoals, mutate: mutateGoals } = useData(getMyGoals, "my-goals", { initialData: [] });
+  const { data: cachedThrustAreas } = useData(getThrustAreas, "thrust-areas", { initialData: [] });
+  const { data: cachedCycle } = useData(getActiveCycle, "active-cycle", { initialData: null });
+
   const [goals, setGoals]              = useState([]);
   const [thrustAreas, setThrustAreas]  = useState([]);
   const [cycle, setCycle]              = useState(null);
   const [modalOpen, setModalOpen]      = useState(false);
   const [editingGoal, setEditingGoal]  = useState(null);
-  const [loading, setLoading]         = useState(true);
   const [confirm, setConfirm]           = useState(null);
 
-  const fetchGoals = async () => {
-    try {
-      const res = await getMyGoals();
-      setGoals(Array.isArray(res.data) ? res.data : []);
-    } catch { toast.error("Failed to load goals"); }
-    finally { setLoading(false); }
-  };
+  // Sync cache with local state for optimistic updates and smooth rendering
+  useEffect(() => {
+    if (cachedGoals) setGoals(cachedGoals);
+  }, [cachedGoals]);
 
   useEffect(() => {
-    const init = async () => { await fetchGoals(); };
-    init();
-    Promise.all([
-      getThrustAreas().then((r) => setThrustAreas(r.data)).catch(() => {}),
-      getActiveCycle().then((r) => setCycle(r.data)).catch(() => {}),
-    ]);
-  }, []);
+    if (cachedThrustAreas) setThrustAreas(cachedThrustAreas);
+  }, [cachedThrustAreas]);
+
+  useEffect(() => {
+    if (cachedCycle) setCycle(cachedCycle);
+  }, [cachedCycle]);
+
+  const [searchParams] = useSearchParams();
+
+  // Deep-linking: scroll to goal when goalId query param is present
+  useEffect(() => {
+    const goalId = searchParams.get("goalId");
+    if (goalId && goals.length > 0) {
+      const el = document.getElementById(`goal-${goalId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("animate-success");
+        setTimeout(() => el.classList.remove("animate-success"), 1500);
+      }
+    }
+  }, [goals, searchParams]);
 
   const totalWeightage     = goals.reduce((s, g) => s + g.weightage, 0);
   const remainingWeightage = Math.max(0, 100 - totalWeightage);
@@ -64,7 +82,7 @@ export default function EmployeeDashboard() {
         : await createGoal(data);
       toast.success(editingGoal ? "Goal updated" : "Goal added");
       setEditingGoal(null);
-      await fetchGoals();
+      await mutateGoals();
     } catch (err) {
       setGoals(snapshot);
       toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save goal");
@@ -72,17 +90,60 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const handleDelete = async (id) => {
-    const snapshot = goals;
+  const handleDelete = (id) => {
+    const deletedGoal = goals.find((g) => g.id === id);
+    if (!deletedGoal) return;
+
+    // Optimistically remove from UI
     setGoals((prev) => prev.filter((g) => g.id !== id));
-    try {
-      await deleteGoal(id);
-      toast.success("Goal deleted");
-    } catch (err) {
-      setGoals(snapshot);
-      toast.error(err.response?.data?.detail || "Failed to delete goal");
-    }
+
+    // Schedule actual deletion after 10s
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        await deleteGoal(id);
+        await mutateGoals();
+      } catch (err) {
+        // Restore if API fails
+        setGoals((prev) => [...prev, deletedGoal]);
+        toast.error(err.response?.data?.detail || "Failed to delete goal");
+      }
+    }, 10000);
+
+    // Show undo toast for 10 seconds
+    toast(
+      (t) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span>Goal deleted</span>
+          <button
+            onClick={() => {
+              cancelled = true;
+              clearTimeout(timer);
+              setGoals((prev) => [...prev, deletedGoal]);
+              toast.dismiss(t.id);
+              toast.success("Goal restored");
+            }}
+            style={{
+              padding: "4px 12px",
+              borderRadius: 6,
+              background: "rgba(99,102,241,0.15)",
+              border: "1px solid rgba(99,102,241,0.3)",
+              color: "#818CF8",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Undo
+          </button>
+        </div>
+      ),
+      { duration: 10000, className: "toast-dark" }
+    );
   };
+
 
   const handleSubmitAll = async () => {
     const snapshot = goals.map((g) => ({ ...g }));
@@ -96,15 +157,15 @@ export default function EmployeeDashboard() {
       setGoals(snapshot);
       toast.error(err.response?.data?.detail || err.response?.data?.error || "Submission failed");
     } finally {
-      await fetchGoals();
+      await mutateGoals();
     }
   };
 
-  if (loading) return <SkeletonPage cards={3} />;
+  if (loadingGoals) return <SkeletonPage cards={3} />;
 
   return (
     <AppShell user={user} logout={logout} title="My Goals" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"} actions={cycle && <CycleCountdown cycle={cycle} />}>
-      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
+
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 

@@ -4,7 +4,7 @@ import { getTeamCheckIns } from "../../api/checkins";
 import AppShell from "../../components/AppShell";
 import ManagerCheckInRow from "../../components/ManagerCheckInRow";
 import { SkeletonPage } from "../../components/Skeleton";
-import { Toaster } from "react-hot-toast";
+
 import { ChevronDown, ChevronUp, Users } from "lucide-react";
 
 function initials(name = "") {
@@ -39,7 +39,7 @@ export default function ManagerCheckIns() {
       title="Team Check-ins"
       subtitle={`${currentQuarter ? `${currentQuarter} window` : "No active window"}${cycle ? ` · ${cycle.year}` : ""}`}
     >
-      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
+
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {team.length === 0 ? (

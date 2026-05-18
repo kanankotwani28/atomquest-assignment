@@ -4,7 +4,7 @@ import { getMyCheckIns } from "../../api/checkins";
 import AppShell from "../../components/AppShell";
 import GoalCheckInCard from "../../components/GoalCheckInCard";
 import { SkeletonPage } from "../../components/Skeleton";
-import { Toaster } from "react-hot-toast";
+
 import { ClipboardCheck } from "lucide-react";
 
 export default function EmployeeCheckIns() {
@@ -42,7 +42,7 @@ export default function EmployeeCheckIns() {
 
   return (
     <AppShell user={user} logout={logout} title="Quarterly Check-ins" subtitle={subtitle}>
-      <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
+
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {showClosed && (

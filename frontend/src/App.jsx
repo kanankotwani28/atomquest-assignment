@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Login              from './pages/Login';
 import ProtectedRoute     from './components/ProtectedRoute';
 import ErrorBoundary      from './components/ErrorBoundary';
@@ -14,9 +15,34 @@ const Unauthorized = () => (
   </div>
 );
 
+/**
+ * Toast timing constants (BRD spec):
+ *   success = 3 000 ms
+ *   error   = 5 000 ms
+ *   warning = 4 000 ms  (custom toasts use toast() with duration)
+ */
+const TOAST_OPTIONS = {
+  className: "toast-dark",
+  success: {
+    duration: 3000,
+    className: "toast-dark toast-dark-success",
+  },
+  error: {
+    duration: 5000,
+    className: "toast-dark toast-dark-error",
+  },
+  // Custom / default toast (used for warnings)
+  duration: 4000,
+};
+
 export default function App() {
   return (
     <ErrorBoundary>
+      {/* Centralized Toaster — no per-page Toasters needed */}
+      <Toaster
+        position="top-right"
+        toastOptions={TOAST_OPTIONS}
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
