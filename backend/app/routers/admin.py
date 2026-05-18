@@ -320,17 +320,38 @@ def push_shared_goal(body: SharedGoalPush,
     blocked = []
 
     for emp_id in body.employee_ids:
-        existing_total = db.query(func.sum(Goal.weightage)).filter(
+        emp = db.query(User).filter(User.id == str(emp_id)).first()
+        if not emp:
+            blocked.append({
+                "employee_id": str(emp_id),
+                "reason": "Employee not found"
+            })
+            continue
+
+        total_all = db.query(func.sum(Goal.weightage)).filter(
             Goal.owner_id == str(emp_id),
             Goal.cycle_id == cycle.id
         ).scalar() or 0
 
-        if existing_total + body.weightage > 100:
-            available = 100 - existing_total
+        total_approved = db.query(func.sum(Goal.weightage)).filter(
+            Goal.owner_id == str(emp_id),
+            Goal.cycle_id == cycle.id,
+            Goal.status == GoalStatusEnum.APPROVED
+        ).scalar() or 0
+
+        if total_all + body.weightage > 100:
+            available = 100 - total_all
+            over_by = round((total_all + body.weightage) - 100, 1)
             blocked.append({
                 "employee_id": str(emp_id),
-                "reason": f"Current total is {existing_total}%. "
-                          f"Only {available}% available."
+                "employee_name": emp.name,
+                "current_total": total_all,
+                "approved_total": total_approved,
+                "shared_weightage": body.weightage,
+                "would_be": round(total_all + body.weightage, 1),
+                "available": available,
+                "over_by": over_by,
+                "reason": f"Total {total_all}% + {body.weightage}% = {round(total_all + body.weightage, 1)}% (exceeds 100% by {over_by}%). Only {available}% available."
             })
             continue
 

@@ -3,41 +3,46 @@ from app.models.models import User, ThrustArea, Cycle, RoleEnum
 from app.services.auth_service import hash_password
 from datetime import datetime
 
-# Create all tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
 
 def seed():
-    # Users
+    # ── Admin ──────────────────────────────────────────────────────
     if not db.query(User).filter(User.email == "admin@atomquest.com").first():
         admin = User(name="Admin User", email="admin@atomquest.com",
-                     password=hash_password("password123"), role=RoleEnum.ADMIN,
-                     department="HR")
+                     password=hash_password("password123"), role=RoleEnum.ADMIN, department="HR")
         db.add(admin)
+        db.flush()
 
+    # ── Manager ────────────────────────────────────────────────────
     if not db.query(User).filter(User.email == "manager@atomquest.com").first():
         manager = User(name="Priya Sharma", email="manager@atomquest.com",
-                       password=hash_password("password123"), role=RoleEnum.MANAGER,
-                       department="Sales")
+                       password=hash_password("password123"), role=RoleEnum.MANAGER, department="Sales")
         db.add(manager)
-        db.flush()  # flush to get manager.id before creating employee
+        db.flush()
+    else:
+        db.flush()
 
     manager = db.query(User).filter(User.email == "manager@atomquest.com").first()
 
-    if not db.query(User).filter(User.email == "employee@atomquest.com").first():
-        employee = User(name="Rahul Verma", email="employee@atomquest.com",
-                        password=hash_password("password123"), role=RoleEnum.EMPLOYEE,
-                        department="Sales", manager_id=manager.id)
-        db.add(employee)
+    # ── Employees (both under Priya) ──────────────────────────────
+    employees = [
+        ("Rahul Verma",  "employee@atomquest.com",  "Sales"),
+        ("Meera Patel",  "meera@atomquest.com",      "Sales"),
+    ]
+    for name, email, dept in employees:
+        if not db.query(User).filter(User.email == email).first():
+            db.add(User(name=name, email=email, password=hash_password("password123"),
+                       role=RoleEnum.EMPLOYEE, department=dept, manager_id=manager.id))
 
-    # Thrust areas
+    # ── Thrust Areas ───────────────────────────────────────────────
     for name in ["Revenue Growth", "Cost Optimisation",
                  "Customer Satisfaction", "Safety", "People Development"]:
         if not db.query(ThrustArea).filter(ThrustArea.name == name).first():
             db.add(ThrustArea(name=name))
 
-    # Active cycle
+    # ── Active Cycle ───────────────────────────────────────────────
     if not db.query(Cycle).filter(Cycle.year == 2025).first():
         db.add(Cycle(year=2025, phase="Goal Setting",
                      start_date=datetime(2025, 5, 1),
@@ -45,7 +50,10 @@ def seed():
                      is_active=True, checkin_window_open=True))
 
     db.commit()
-    print("Seed complete — admin / manager / employee all use password: password123")
+    print("Seed complete — password: password123")
+    print("Admin:  admin@atomquest.com")
+    print("Manager: manager@atomquest.com / priya@atomquest.com")
+    print("Employees: employee@atomquest.com (Rahul Verma), meera@atomquest.com (Meera Patel)")
 
 if __name__ == "__main__":
     seed()

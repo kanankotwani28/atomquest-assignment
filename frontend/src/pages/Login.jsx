@@ -13,9 +13,7 @@ const ROLE_REDIRECTS = {
 
 const AtombergLogo = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-10 w-10 text-[var(--success-text)] transition-transform duration-300 hover:rotate-45">
-    {/* Atomic Nucleus */}
     <circle cx="12" cy="12" r="2.5" fill="currentColor" className="text-[var(--success-text)]" />
-    {/* Orbital paths */}
     <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(30 12 12)" stroke="currentColor" strokeWidth="1.2" className="opacity-80" />
     <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(150 12 12)" stroke="currentColor" strokeWidth="1.2" className="opacity-80" />
     <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(90 12 12)" stroke="currentColor" strokeWidth="1.2" className="opacity-40" />
@@ -46,8 +44,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[var(--bg-root)] flex items-center justify-center p-4 relative transition-colors duration-200">
       <Toaster position="top-right" toastOptions={{ className: 'toast-dark' }} />
-      
-      {/* Floating Theme Selector top-right */}
+
       <div className="absolute top-6 right-6">
         <button
           onClick={toggleTheme}
@@ -58,9 +55,7 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Login Card Panel */}
       <div className="aq-card w-full max-w-md p-8 transition-transform duration-200">
-        {/* Header */}
         <div className="mb-8">
           <div className="mb-4 flex items-center justify-start">
             <AtombergLogo />
@@ -109,7 +104,6 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Quick-login hint for demo/hackathon judges */}
         <div className="mt-8 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]">
           <div className="flex items-center gap-2 mb-3">
             <KeyRound size={13} className="text-[var(--text-muted)]" />
@@ -119,16 +113,20 @@ export default function Login() {
           </div>
           <div className="space-y-1.5 text-xs text-[var(--text-secondary)] mono">
             <div className="flex justify-between">
-              <span>Employee:</span>
-              <span className="text-[var(--text-primary)]">employee@atomquest.com</span>
+              <span>Admin:</span>
+              <span className="text-[var(--text-primary)]">admin@atomquest.com</span>
             </div>
             <div className="flex justify-between">
               <span>Manager:</span>
               <span className="text-[var(--text-primary)]">manager@atomquest.com</span>
             </div>
             <div className="flex justify-between">
-              <span>Admin:</span>
-              <span className="text-[var(--text-primary)]">admin@atomquest.com</span>
+              <span>Employee 1:</span>
+              <span className="text-[var(--text-primary)]">employee@atomquest.com</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Employee 2:</span>
+              <span className="text-[var(--text-primary)]">meera@atomquest.com</span>
             </div>
             <div className="pt-1.5 border-t border-[var(--border)] mt-1.5 flex justify-between text-[var(--text-muted)]">
               <span>Password:</span>

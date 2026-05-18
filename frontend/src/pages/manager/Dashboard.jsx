@@ -80,7 +80,7 @@ export default function ManagerDashboard() {
     }));
   };
 
-  const handlePushSharedGoal = async (e) => {
+const handlePushSharedGoal = async (e) => {
     e.preventDefault();
     try {
       const res = await pushTeamSharedGoal({
@@ -94,8 +94,10 @@ export default function ManagerDashboard() {
     } catch (err) {
       const detail = err.response?.data?.detail;
       if (detail && detail.blocked) {
-        const list = detail.blocked.map((b) => `${b.name} (${b.approved_total}% -> ${b.would_be}%)`).join(", ");
-        toast.error(`${detail.message}: ${list}`);
+        const list = detail.blocked.map((b) =>
+          `  - ${b.name}: ${b.approved_total}% + ${b.shared_weightage}% = ${b.would_be}% (exceeds 100% by ${b.would_be - 100}%)`
+        ).join("\n");
+        toast.error(`${detail.message}\n\nBlocked:\n${list}`);
       } else {
         toast.error(detail?.message || detail || "Failed to push KPI");
       }

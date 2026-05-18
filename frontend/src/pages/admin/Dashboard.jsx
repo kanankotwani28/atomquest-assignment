@@ -189,11 +189,26 @@ export default function AdminDashboard() {
         weightage: Number(sharedGoal.weightage),
       };
       const res = await pushSharedGoal(payload);
-      toast.success(res.data.message);
+      if (res.data.blocked > 0 && res.data.blocked_details) {
+        const lines = res.data.blocked_details.map((b) =>
+          `  - ${b.employee_name}: current ${b.current_total}% + ${b.shared_weightage}% = ${b.would_be}% (over by ${b.over_by}%)`
+        ).join("\n");
+        toast.error(`${res.data.warning}\n\nBlocked:\n${lines}`);
+      } else {
+        toast.success(res.data.message);
+      }
       setSharedGoal(initialSharedGoal);
       await refresh();
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to push shared goal");
+      const detail = err.response?.data?.detail;
+      if (detail?.blocked) {
+        const lines = detail.blocked.map((b) =>
+          `  - ${b.name}: ${b.approved_total}% + ${b.shared_weightage}% = ${b.would_be}% (over by ${b.would_be - 100}%)`
+        ).join("\n");
+        toast.error(`${detail.message}\n\nBlocked:\n${lines}`);
+      } else {
+        toast.error(err.response?.data?.detail || "Failed to push shared goal");
+      }
     }
   };
 

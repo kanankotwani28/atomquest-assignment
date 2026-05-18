@@ -265,25 +265,32 @@ def push_team_shared_goal(body: SharedGoalPush,
     # approved weightage to exceed 100%. Return structured error with details.
     blocked = []
     for emp in employees:
-        approved_total = db.query(func.sum(Goal.weightage)).filter(
+        emp_goals = db.query(Goal).filter(
             Goal.owner_id == emp.id,
-            Goal.cycle_id == cycle.id,
-            Goal.status == GoalStatusEnum.APPROVED
-        ).scalar() or 0
-        after_total = approved_total + body.weightage
+            Goal.cycle_id == cycle.id
+        ).all()
+        total_all = sum(g.weightage for g in emp_goals)
+        approved_total = sum(g.weightage for g in emp_goals if g.status == GoalStatusEnum.APPROVED)
+        after_total = round(total_all + body.weightage, 1)
         if after_total > 100:
+            over_by = round(after_total - 100, 1)
+            available = round(100 - total_all, 1)
             blocked.append({
                 "id": str(emp.id),
                 "name": emp.name,
                 "email": emp.email,
-                "approved_total": approved_total,
-                "would_be": after_total
+                "current_total": round(total_all, 1),
+                "approved_total": round(approved_total, 1),
+                "shared_weightage": body.weightage,
+                "would_be": after_total,
+                "available": available,
+                "over_by": over_by
             })
     if blocked:
         raise HTTPException(
             status_code=400,
             detail={
-                "message": "Cannot push shared goal — would exceed 100% approved weightage for some employees",
+                "message": f"Cannot push shared goal — weightage would exceed 100% for {len(blocked)} employee(s). Only push to eligible employees or ask them to rebalance first.",
                 "blocked": blocked
             }
         )
