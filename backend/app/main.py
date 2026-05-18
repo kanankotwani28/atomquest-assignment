@@ -58,6 +58,7 @@ else:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://atomquest-assignment.vercel.app",
+        "https://atomquest-assignment-7q1s.vercel.app",
     ]
 
 app.add_middleware(
