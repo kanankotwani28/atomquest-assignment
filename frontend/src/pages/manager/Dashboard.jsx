@@ -20,8 +20,9 @@ const initialSharedGoal = {
 const UOM_OPTIONS = [
   { value: "NUMERIC_MIN", label: "Higher is better" },
   { value: "NUMERIC_MAX", label: "Lower is better" },
-  { value: "TIMELINE", label: "Timeline" },
-  { value: "ZERO", label: "Zero = Success" },
+  { value: "PERCENTAGE",  label: "Percentage (%)" },
+  { value: "TIMELINE",    label: "Timeline" },
+  { value: "ZERO",        label: "Zero = Success" },
 ];
 
 export default function ManagerDashboard() {
@@ -84,11 +85,14 @@ export default function ManagerDashboard() {
   const handlePushSharedGoal = async (e) => {
     e.preventDefault();
     try {
-      const res = await pushTeamSharedGoal({
+      const payload = {
         ...sharedGoal,
-        target: Number(sharedGoal.target),
+        target: sharedGoal.uom_type === "TIMELINE"
+          ? new Date(sharedGoal.target).getTime()
+          : Number(sharedGoal.target),
         weightage: Number(sharedGoal.weightage),
-      });
+      };
+      const res = await pushTeamSharedGoal(payload);
       toast.success(res.data.message);
       setSharedGoal(initialSharedGoal);
       fetchTeam();
@@ -207,7 +211,7 @@ export default function ManagerDashboard() {
                 </div>
                 <div className="admin-form-field">
                   <label className="admin-label">Target Value</label>
-                  <input type="number" step="any" value={sharedGoal.target} onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })} className="admin-input" placeholder="E.g., 100000" required />
+                  <input type={sharedGoal.uom_type === "TIMELINE" ? "date" : "number"} step="any" value={sharedGoal.target} onChange={(e) => setSharedGoal({ ...sharedGoal, target: e.target.value })} className="admin-input" placeholder="E.g., 100000" required />
                 </div>
                 <div className="admin-form-field">
                   <label className="admin-label">Weightage %</label>

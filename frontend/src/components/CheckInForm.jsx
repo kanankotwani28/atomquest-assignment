@@ -17,6 +17,16 @@ const UOM_LABELS = {
   ZERO:        "Zero = Success",
 };
 
+const formatTargetValue = (target, uom) => {
+  if (uom === "ZERO") return "0";
+  if (uom === "TIMELINE") {
+    if (!target) return "—";
+    try { return new Date(target).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch { return target?.toLocaleString() ?? "—"; }
+  }
+  return target !== undefined ? target.toLocaleString() : "—";
+};
+
 export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, canEdit = true }) {
   const [actual, setActual] = useState(existingCheckIn?.actual ?? "");
   const [completionDate, setCompletionDate] = useState(
@@ -74,11 +84,6 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
 
   const fillColor = getProgressColor(scorePct);
 
-  const formatTimelineTarget = (targetVal) => {
-    try { return new Date(targetVal).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
-    catch (e) { return targetVal; }
-  };
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -97,7 +102,7 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
             <input type="number" step="any" value={actual} onChange={(e) => setActual(e.target.value)} disabled={!canEdit} placeholder={uom === "ZERO" ? "0" : "Enter actual value"} className="admin-input" style={{ fontSize: 12 }} />
           )}
           <span style={{ fontSize: 10, color: "#475569" }}>
-            {UOM_LABELS[uom]} · Target: {isTimeline ? formatTimelineTarget(goal.target) : (uom === "ZERO" ? "0" : goal.target?.toLocaleString())}
+            {UOM_LABELS[uom]} · Target: {formatTargetValue(goal.target, uom)}
           </span>
         </div>
 

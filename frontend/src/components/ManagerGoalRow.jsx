@@ -2,11 +2,22 @@ import { useState } from "react";
 import { managerEditGoal } from "../api/manager";
 import toast from "react-hot-toast";
 
+const formatTargetValue = (target, uom) => {
+  if (uom === "ZERO") return "0";
+  if (uom === "TIMELINE") {
+    if (!target) return "—";
+    try { return new Date(target).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch { return target?.toLocaleString() ?? "—"; }
+  }
+  return target !== undefined ? target.toLocaleString() : "—";
+};
+
 const UOM_LABELS = {
   NUMERIC_MIN: "Higher is better",
   NUMERIC_MAX: "Lower is better",
-  TIMELINE: "Timeline",
-  ZERO: "Zero = Success",
+  PERCENTAGE:  "Percentage",
+  TIMELINE:    "Timeline",
+  ZERO:        "Zero = Success",
 };
 
 const STATUS_BADGE = {
@@ -64,7 +75,7 @@ export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
             onBlur={(e) => { handleBlurTarget(e); e.target.style.borderColor = "transparent"; }}
           />
         ) : (
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#94A3B8" }}>{goal.uomType === "ZERO" ? "0" : goal.target?.toLocaleString()}</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#94A3B8" }}>{formatTargetValue(goal.target, goal.uomType || goal.uom_type)}</span>
         )}
       </td>
       <td style={{ padding: "10px 12px" }}>

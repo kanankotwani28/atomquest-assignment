@@ -1,8 +1,19 @@
 const UOM_LABELS = {
   NUMERIC_MIN: "Higher is better",
   NUMERIC_MAX: "Lower is better",
-  TIMELINE: "Timeline",
-  ZERO: "Zero = Success",
+  PERCENTAGE:  "Percentage",
+  TIMELINE:    "Timeline",
+  ZERO:        "Zero = Success",
+};
+
+const formatTargetValue = (target, uom) => {
+  if (uom === "ZERO") return "0 incidents";
+  if (uom === "TIMELINE") {
+    if (!target) return "—";
+    try { return new Date(target).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch { return target?.toLocaleString() ?? "—"; }
+  }
+  return target !== undefined ? target.toLocaleString() : "—";
 };
 
 const STATUS_STRIP = {
@@ -62,7 +73,7 @@ export default function GoalCard({ goal, onEdit, onDelete }) {
         <div>
           <span className="admin-label" style={{ marginBottom: 3, display: "block" }}>Target</span>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: "#fff" }}>
-            {uom === "ZERO" ? "0 incidents" : (goal.target !== undefined ? goal.target.toLocaleString() : "—")}
+            {formatTargetValue(goal.target, uom)}
           </span>
         </div>
         <div>

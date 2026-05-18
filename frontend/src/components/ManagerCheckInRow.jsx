@@ -5,6 +5,16 @@ import toast from "react-hot-toast";
 
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
 
+const formatTargetValue = (target, uom) => {
+  if (uom === "ZERO") return "0";
+  if (uom === "TIMELINE") {
+    if (!target) return "—";
+    try { return new Date(target).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch { return target?.toLocaleString() ?? "—"; }
+  }
+  return target !== undefined ? target.toLocaleString() : "—";
+};
+
 export default function ManagerCheckInRow({ goal, onUpdated }) {
   const [commentingOn, setCommentingOn] = useState(null);
   const [comment, setComment] = useState("");
@@ -84,7 +94,7 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 10, color: "#475569" }}>Planned</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#64748B" }}>{goal.uomType === "ZERO" ? "0" : goal.target?.toLocaleString()}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#64748B" }}>{formatTargetValue(goal.target, goal.uomType || goal.uom_type)}</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 10, color: "#475569" }}>Actual</span>
