@@ -258,11 +258,18 @@ def get_admin_analytics(db: Session = Depends(get_db),
 
 # ── Audit trail ───────────────────────────────────────────────────
 @router.get("/audit-logs")
-def get_audit_logs(db: Session = Depends(get_db),
+def get_audit_logs(page: int = 1, page_size: int = 50,
+                   db: Session = Depends(get_db),
                    _=Depends(require_role(RoleEnum.ADMIN))):
-    logs   = db.query(AuditLog).order_by(
-                 AuditLog.created_at.desc()
-             ).limit(500).all()
+    page = max(1, page)
+    page_size = min(max(1, page_size), 200)
+    offset = (page - 1) * page_size
+
+    total = db.query(func.count(AuditLog.id)).scalar() or 0
+
+    logs = db.query(AuditLog).order_by(
+        AuditLog.created_at.desc()
+    ).offset(offset).limit(page_size).all()
     result = []
     for l in logs:
         try:
@@ -286,7 +293,8 @@ def get_audit_logs(db: Session = Depends(get_db),
             "reason":        l.reason,
             "created_at":    l.created_at.isoformat() if l.created_at else None
         })
-    return result
+
+    return {"items": result, "total": total, "page": page, "page_size": page_size, "pages": (total + page_size - 1) // page_size}
 
 # ── Unlock a goal ─────────────────────────────────────────────────
 @router.post("/goals/{goal_id}/unlock")

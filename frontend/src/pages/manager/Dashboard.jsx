@@ -9,6 +9,7 @@ import { SkeletonPage } from "../../components/Skeleton";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import toast, { Toaster } from "react-hot-toast";
 import { Users, Send, ShieldAlert } from "lucide-react";
+import CycleCountdown from "../../components/CycleCountdown";
 
 const initialSharedGoal = {
   title: "",
@@ -63,19 +64,35 @@ const [loading, setLoading]         = useState(true);
       confirmLabel: "Approve",
       danger: false,
       onConfirm: async () => {
-        try { const res = await approveGoals(employeeId); toast.success(res.data.message); fetchTeam(); }
-        catch (err) { toast.error(err.response?.data?.error || "Approval failed"); }
+        const snapshot = [...team];
+        setTeam((prev) => prev.map((t) =>
+          t.employee.id === employeeId
+            ? { ...t, approvedCount: t.goals.length, submittedCount: 0 }
+            : t
+        ));
+        try { const res = await approveGoals(employeeId); toast.success(res.data.message); }
+        catch (err) {
+          setTeam(snapshot);
+          toast.error(err.response?.data?.error || "Approval failed");
+        } finally { await fetchTeam(); }
       },
     });
   };
 
   const handleReturn = async (reason) => {
+    const snapshot = [...team];
+    setTeam((prev) => prev.map((t) => {
+      const updatedGoals = t.goals.map((g) => g.id === returningGoal.id ? { ...g, status: "REVISION_REQUIRED" } : g);
+      return { ...t, goals: updatedGoals, submittedCount: Math.max(0, t.submittedCount - 1), revisionCount: t.revisionCount + 1 };
+    }));
     try {
       await returnGoal(returningGoal.id, reason);
       toast.success("Goal returned for rework");
-      fetchTeam();
     } catch (err) {
+      setTeam(snapshot);
       toast.error(err.response?.data?.error || "Failed to return goal");
+    } finally {
+      await fetchTeam();
     }
   };
 
@@ -123,7 +140,7 @@ const [loading, setLoading]         = useState(true);
   if (loading) return <SkeletonPage cards={4} />;
 
   return (
-    <AppShell user={user} logout={logout} title="Manager Workspace" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}>
+    <AppShell user={user} logout={logout} title="Manager Workspace" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"} actions={cycle && <CycleCountdown cycle={cycle} />}>
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>

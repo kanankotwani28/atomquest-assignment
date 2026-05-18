@@ -13,7 +13,7 @@ export default function EmployeeGoalCard({
 }) {
   const [expanded, setExpanded] = useState(submittedCount > 0 || revisionCount > 0);
   const allApproved = approvedCount === goals.length && goals.length > 0;
-  const canApproveAll = submittedCount > 0 && Math.round(totalWeightage) === 100;
+  const canApproveAll = submittedCount > 0 && Math.round(totalWeightage) === 100 && !allApproved;
 
   return (
     <div className="admin-glass" style={{ padding: 0, overflow: "hidden" }}>
@@ -40,6 +40,11 @@ export default function EmployeeGoalCard({
             {approvedCount > 0 && <span className="admin-badge admin-badge--approve">{approvedCount} approved</span>}
             {revisionCount > 0 && <span className="admin-badge admin-badge--submit">{revisionCount} revision</span>}
             {goals.length === 0 && <span className="admin-badge admin-badge--draft">No goals</span>}
+            {allApproved && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 6, fontSize: 10, fontWeight: 600, background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.25)" }}>
+                ✓ Locked
+              </span>
+            )}
           </div>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: Math.round(totalWeightage) === 100 ? "#10B981" : "#64748B" }}>
             {totalWeightage.toFixed(0)}%

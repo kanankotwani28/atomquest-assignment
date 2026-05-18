@@ -72,6 +72,7 @@ export default function AdminDashboard() {
   const [users, setUsers]             = useState([]);
   const [goals, setGoals]             = useState([]);
   const [auditLogs, setAuditLogs]     = useState([]);
+  const [auditMeta, setAuditMeta]    = useState({ page: 1, pages: 1, total: 0 });
   const [thrustAreas, setThrustAreas] = useState([]);
   const [sharedGoal, setSharedGoal]   = useState(initialSharedGoal);
   const [cycleForm, setCycleForm]      = useState(initialCycle);
@@ -90,13 +91,15 @@ export default function AdminDashboard() {
   const activeCycleName = cycles.find((c) => c.is_active)?.year || "No active cycle";
 
   const refresh = async () => {
-    const [comp, cyc, usr, gl, aud, th, esc] = await Promise.all([
+    const [comp, cyc, usr, gl, th, esc] = await Promise.all([
       getCompletionDashboard(), getCycles(), getAdminUsers(),
-      getAdminGoals(), getAuditLogs(), getThrustAreas(),
+      getAdminGoals(), getThrustAreas(),
       getEscalationSummary().catch(() => ({ data: { total_active: 0 } })),
     ]);
     setCompletion(comp.data); setCycles(cyc.data); setUsers(usr.data);
-    setGoals(gl.data); setAuditLogs(aud.data); setThrustAreas(th.data);
+    setGoals(gl.data); setThrustAreas(th.data);
+    const aud = await getAuditLogs(1, 50);
+    setAuditLogs(aud.data.items || aud.data); setAuditMeta({ page: aud.data.page || 1, pages: aud.data.pages || 1, total: aud.data.total || 0 });
     setHasActiveEscalations(esc.data.total_active > 0);
   };
 
@@ -111,6 +114,18 @@ export default function AdminDashboard() {
     } catch { /* ignore */ }
     return () => { sseHandle?.close?.(); };
   }, []);
+
+  const [auditPage, setAuditPage] = useState(1);
+  const totalAuditPages = auditMeta.pages || 1;
+
+  const fetchAuditPage = async (page) => {
+    try {
+      const res = await getAuditLogs(page, 50);
+      setAuditLogs(res.data.items || res.data);
+      setAuditMeta({ page: res.data.page || page, pages: res.data.pages || 1, total: res.data.total || 0 });
+      setAuditPage(page);
+    } catch { toast.error("Failed to load audit logs"); }
+  };
 
   const handleActivateCycle  = async (id) => { try { toast.success((await activateCycle(id)).data.message); await refresh(); } catch (e) { toast.error(e.response?.data?.detail || "Failed"); } };
   const handleOpenQuarter    = async (cid, q) => { try { toast.success((await openQuarter(cid, q)).data.message); await refresh(); } catch (e) { toast.error(e.response?.data?.detail || "Failed"); } };
@@ -557,7 +572,7 @@ export default function AdminDashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div className="admin-section-head">
                 <span className="admin-section-label">System Audit Trail</span>
-                <span style={{ fontSize: 11, color: "#475569" }}>{auditLogs.length} events</span>
+                <span style={{ fontSize: 11, color: "#475569" }}>{auditMeta.total} events · page {auditPage} of {totalAuditPages}</span>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
@@ -594,6 +609,13 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              {totalAuditPages > 1 && (
+                <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+                  <button className="admin-btn admin-btn--sm" onClick={() => fetchAuditPage(auditPage - 1)} disabled={auditPage <= 1}>← Prev</button>
+                  <span style={{ display: "flex", alignItems: "center", fontSize: 12, color: "#64748B" }}>Page {auditPage} of {totalAuditPages}</span>
+                  <button className="admin-btn admin-btn--sm" onClick={() => fetchAuditPage(auditPage + 1)} disabled={auditPage >= totalAuditPages}>Next →</button>
+                </div>
+              )}
             </div>
           )}
 

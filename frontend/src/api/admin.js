@@ -4,7 +4,7 @@ import api from "./axios";
 export const getCompletionDashboard = () => api.get("/admin/completion");
 
 // ── Audit logs ────────────────────────────────────────────────────
-export const getAuditLogs = () => api.get("/admin/audit-logs");
+export const getAuditLogs = (page = 1, pageSize = 50) => api.get(`/admin/audit-logs?page=${page}&page_size=${pageSize}`);
 
 // ── Cycles ────────────────────────────────────────────────────────
 export const getCycles       = ()       => api.get("/admin/cycles");
@@ -58,15 +58,28 @@ export const downloadAchievementCSV = async () => {
 
 // ── SSE / Polling completion stream ───────────────────────────────
 export const startCompletionStream = (onMessage) => {
-  const interval = setInterval(async () => {
+  let retryCount = 0;
+  const maxRetries = 5;
+  const baseDelay = 2000;
+
+  const poll = async () => {
     try {
       const res = await getCompletionDashboard();
+      retryCount = 0;
       onMessage({ data: res.data });
     } catch (e) {
       console.error("Polling error in completion stream:", e);
+      retryCount++;
+      if (retryCount <= maxRetries) {
+        const delay = Math.min(baseDelay * Math.pow(2, retryCount - 1), 30000);
+        setTimeout(poll, delay);
+      }
     }
-  }, 5000);
-  
+  };
+
+  const interval = setInterval(poll, 5000);
+  poll();
+
   return {
     close: () => clearInterval(interval)
   };

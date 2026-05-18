@@ -12,6 +12,7 @@ import { SkeletonPage } from "../../components/Skeleton";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import toast, { Toaster } from "react-hot-toast";
 import { Target, Plus, Send, CheckCircle2, AlertTriangle } from "lucide-react";
+import CycleCountdown from "../../components/CycleCountdown";
 
 export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
@@ -51,47 +52,58 @@ export default function EmployeeDashboard() {
                             Math.round(totalWeightage) === 100;
 
   const handleSave = async (data) => {
+    const snapshot = [...goals];
+    if (editingGoal) {
+      setGoals((prev) => prev.map((g) => g.id === editingGoal.id ? { ...g, ...data } : g));
+    } else {
+      setGoals((prev) => [...prev, { ...data, id: "__optimistic__", status: "DRAFT" }]);
+    }
     try {
-      if (editingGoal) { await updateGoal(editingGoal.id, data); toast.success("Goal updated"); }
-      else             { await createGoal(data);                 toast.success("Goal added"); }
+      editingGoal
+        ? await updateGoal(editingGoal.id, data)
+        : await createGoal(data);
+      toast.success(editingGoal ? "Goal updated" : "Goal added");
       setEditingGoal(null);
       await fetchGoals();
     } catch (err) {
+      setGoals(snapshot);
       toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save goal");
       throw err;
     }
   };
 
   const handleDelete = async (id) => {
-    setConfirm({
-      title: "Delete Goal",
-      message: "Are you sure you want to delete this goal? This action cannot be undone.",
-      confirmLabel: "Delete",
-      danger: true,
-      onConfirm: async () => {
-        try { await deleteGoal(id); toast.success("Goal deleted"); fetchGoals(); }
-        catch (err) { toast.error(err.response?.data?.detail || "Failed to delete goal"); }
-      },
-    });
+    const snapshot = goals;
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+    try {
+      await deleteGoal(id);
+      toast.success("Goal deleted");
+    } catch (err) {
+      setGoals(snapshot);
+      toast.error(err.response?.data?.detail || "Failed to delete goal");
+    }
   };
 
   const handleSubmitAll = async () => {
-    setConfirm({
-      title: "Submit Goals for Approval",
-      message: "Submit all goals for manager approval? You cannot edit them after submission.",
-      confirmLabel: "Submit All",
-      danger: false,
-      onConfirm: async () => {
-        try { const res = await submitAllGoals(); toast.success(res.data.message); fetchGoals(); }
-        catch (err) { toast.error(err.response?.data?.detail || err.response?.data?.error || "Submission failed"); }
-      },
-    });
+    const snapshot = goals.map((g) => ({ ...g }));
+    setGoals((prev) => prev.map((g) =>
+      ["DRAFT", "RETURNED", "REVISION_REQUIRED"].includes(g.status) ? { ...g, status: "SUBMITTED" } : g
+    ));
+    try {
+      const res = await submitAllGoals();
+      toast.success(res.data.message);
+    } catch (err) {
+      setGoals(snapshot);
+      toast.error(err.response?.data?.detail || err.response?.data?.error || "Submission failed");
+    } finally {
+      await fetchGoals();
+    }
   };
 
   if (loading) return <SkeletonPage cards={3} />;
 
   return (
-    <AppShell user={user} logout={logout} title="My Goals" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}>
+    <AppShell user={user} logout={logout} title="My Goals" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"} actions={cycle && <CycleCountdown cycle={cycle} />}>
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>

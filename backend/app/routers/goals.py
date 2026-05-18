@@ -369,6 +369,14 @@ def approve_goals(payload: dict,
     if not submitted:
         raise HTTPException(400, "No submitted goals to approve")
 
+    approved = db.query(Goal).filter(
+        Goal.owner_id == employee_id,
+        Goal.cycle_id == cycle.id,
+        Goal.status == GoalStatusEnum.APPROVED
+    ).all()
+    if approved:
+        raise HTTPException(400, "Goals already approved for this cycle")
+
     # Check total across ALL goals including already-approved shared goals
     all_goals = db.query(Goal).filter(
         Goal.owner_id == employee_id,

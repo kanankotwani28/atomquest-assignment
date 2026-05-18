@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,7 +41,7 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
   const isRevisionGoal = existingGoal?.status === "REVISION_REQUIRED";
   const weightageOnly = isSharedGoal || isRevisionGoal;
 
-  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting }, watch } = useForm({
     resolver: zodResolver(weightageOnly ? sharedGoalSchema : goalSchema),
     defaultValues: existingGoal || { title: "", description: "", thrust_area_id: "", uom_type: "", target: "", weightage: "" },
   });
@@ -64,12 +64,21 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
     }
   }, [existingGoal, reset]);
 
-  const watchedUom = watch("uom_type");
-  const watchedWeightage = watch("weightage") ? Number(watch("weightage")) : 0;
-  const selectedUom = UOM_OPTIONS.find((opt) => opt.value === watchedUom);
-  const used = Math.min(watchedWeightage, 100);
-  const isExact = watchedWeightage === remainingWeightage;
-  const isOver = watchedWeightage > remainingWeightage;
+  const [uomType, setUomType] = useState("");
+  const [weightageVal, setWeightageVal] = useState("");
+
+  /* eslint-disable react-hooks/incompatible-library */
+  useEffect(() => {
+    const { unsubscribe } = watch((values) => {
+      setUomType(values.uom_type || "");
+      setWeightageVal(values.weightage || "");
+    });
+    return unsubscribe;
+  }, [watch]);
+  const selectedUom = UOM_OPTIONS.find((opt) => opt.value === uomType);
+  const used = Math.min(weightageVal, 100);
+  const isExact = weightageVal === remainingWeightage;
+  const isOver = weightageVal > remainingWeightage;
 
   const onSubmit = async (data) => {
     try {
@@ -133,7 +142,7 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div className="admin-modal-field">
                 <label className="admin-label">Target <span style={{ color: "#EF4444" }}>*</span></label>
-                <input {...register("target")} type={watchedUom === "TIMELINE" ? "date" : "number"} step={watchedUom === "PERCENTAGE" ? "1" : "any"} min={watchedUom === "PERCENTAGE" ? "0" : undefined} max={watchedUom === "PERCENTAGE" ? "100" : undefined} readOnly={weightageOnly} className="admin-input" placeholder={watchedUom === "ZERO" ? "0" : watchedUom === "PERCENTAGE" ? "e.g. 95" : "e.g. 1000000"} />
+                <input {...register("target")} type={uomType === "TIMELINE" ? "date" : "number"} step={uomType === "PERCENTAGE" ? "1" : "any"} min={uomType === "PERCENTAGE" ? "0" : undefined} max={uomType === "PERCENTAGE" ? "100" : undefined} readOnly={weightageOnly} className="admin-input" placeholder={uomType === "ZERO" ? "0" : uomType === "PERCENTAGE" ? "e.g. 95" : "e.g. 1000000"} />
                 {errors.target && <span style={{ fontSize: 11, color: "#EF4444", marginTop: 2 }}>{errors.target.message}</span>}
               </div>
               <div className="admin-modal-field">
@@ -142,7 +151,7 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
                   <span style={{ fontSize: 10, color: "#64748B" }}>{remainingWeightage.toFixed(0)}% remaining</span>
                   <span style={{ fontSize: 10, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#94A3B8" }}>
-                    {isOver ? "⚠ exceeds limit" : isExact ? "✓ balanced" : `${(remainingWeightage - watchedWeightage).toFixed(0)}% left`}
+                    {isOver ? "⚠ exceeds limit" : isExact ? "✓ balanced" : `${(remainingWeightage - weightageVal).toFixed(0)}% left`}
                   </span>
                 </div>
                 {errors.weightage && <span style={{ fontSize: 11, color: "#EF4444", marginTop: 2 }}>{errors.weightage.message}</span>}
@@ -155,11 +164,11 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
                   <div style={{ height: "100%", borderRadius: 3, background: isOver ? "#EF4444" : isExact ? "#10B981" : "#818CF8", width: `${Math.min(used, 100)}%`, transition: "width 300ms ease" }} />
                 </div>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#64748B", minWidth: 28, textAlign: "right" }}>
-                  {watchedWeightage || 0}%
+                  {weightageVal || 0}%
                 </span>
               </div>
               <span style={{ fontSize: 10, color: "#475569" }}>
-                Total across all goals after this: {(100 - remainingWeightage + watchedWeightage).toFixed(0)}% / 100%
+                Total across all goals after this: {(100 - remainingWeightage + weightageVal).toFixed(0)}% / 100%
               </span>
             </div>
           </div>
