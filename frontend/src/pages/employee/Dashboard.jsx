@@ -71,55 +71,56 @@ export default function EmployeeDashboard() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--surface-base)" }}>
-      <div className="skeleton h-4 w-44 rounded" />
+    <div className="admin-page">
+      <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
+      </div>
     </div>
   );
 
   return (
-    <AppShell user={user} logout={logout} title="My Goals"
-      subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}>
+    <AppShell user={user} logout={logout} title="My Goals" subtitle={cycle ? `${cycle.year} · ${cycle.phase}` : "Active Cycle"}>
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
-      <div className="space-y-8">
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
         {/* ── Stats Row ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="aq-card p-5">
-            <p className="label mb-3">Goals Created</p>
-            <p className="number-large">{goals.length}</p>
-            <p className="micro mt-1">of 8 maximum</p>
+        <div className="admin-metrics">
+          <div className="admin-metric-card">
+            <span className="admin-metric-lbl">Goals Created</span>
+            <span className="admin-metric-val">{goals.length}</span>
+            <span className="admin-metric-sub">of 8 maximum</span>
           </div>
-          <div className="aq-card p-5">
-            <p className="label mb-3">Total Weightage</p>
-            <p className="number-large" style={{ color: Math.round(totalWeightage) === 100 ? "var(--score-excellent)" : totalWeightage > 100 ? "var(--score-poor)" : "var(--text-primary)" }}>
-              {totalWeightage.toFixed(1)}%
-            </p>
-            <p className="micro mt-1">{remainingWeightage.toFixed(1)}% remaining</p>
+          <div className="admin-metric-card">
+            <span className="admin-metric-lbl">Total Weightage</span>
+            <span className="admin-metric-val" style={{
+              color: Math.round(totalWeightage) === 100 ? "#10B981" : totalWeightage > 100 ? "#EF4444" : "#fff"
+            }}>{totalWeightage.toFixed(1)}%</span>
+            <span className="admin-metric-sub">{remainingWeightage.toFixed(1)}% remaining</span>
           </div>
-          <div className="aq-card p-5">
-            <p className="label mb-3">Goals Status</p>
-            <div className="flex flex-col gap-2 mt-1">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--status-submitted-text)" }} />
-                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{submittedCount} submitted</span>
+          <div className="admin-metric-card">
+            <span className="admin-metric-lbl">Goals Status</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B" }} />
+                <span style={{ fontSize: 12, color: "#94A3B8" }}>{submittedCount} submitted</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--score-excellent)" }} />
-                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{approvedCount} approved</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }} />
+                <span style={{ fontSize: 12, color: "#94A3B8" }}>{approvedCount} approved</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--text-muted)" }} />
-                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{openCount} open</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#64748B" }} />
+                <span style={{ fontSize: 12, color: "#94A3B8" }}>{openCount} open</span>
               </div>
             </div>
           </div>
-          <div className="aq-card p-5">
-            <p className="label mb-3">Progress</p>
-            <p className="number-large" style={{ color: "var(--score-excellent)" }}>
+          <div className="admin-metric-card">
+            <span className="admin-metric-lbl">Progress</span>
+            <span className="admin-metric-val" style={{ color: "#10B981" }}>
               {goals.length ? `${((approvedCount / goals.length) * 100).toFixed(0)}%` : "0%"}
-            </p>
-            <p className="micro mt-1">{approvedCount} of {goals.length} goals approved</p>
+            </span>
+            <span className="admin-metric-sub">{approvedCount} of {goals.length} goals approved</span>
           </div>
         </div>
 
@@ -128,44 +129,39 @@ export default function EmployeeDashboard() {
 
         {/* ── Status Alerts ───────────────────────────────────── */}
         {allApproved && (
-          <div className="notice-bar green text-sm">
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 size={14} strokeWidth={1.75} />
-              All goals approved and locked by your manager
-            </span>
+          <div className="admin-notice admin-notice--green">
+            <CheckCircle2 size={14} strokeWidth={1.75} />
+            All goals approved and locked by your manager
           </div>
         )}
         {goals.some((g) => g.status === "REVISION_REQUIRED") && (
-          <div className="notice-bar amber text-sm">
-            <span className="inline-flex items-center gap-2">
-              <AlertTriangle size={14} strokeWidth={1.75} />
-              Revision required — a shared KPI was assigned. Rebalance to 100% and resubmit.
-            </span>
+          <div className="admin-notice admin-notice--amber">
+            <AlertTriangle size={14} strokeWidth={1.75} />
+            Revision required — a shared KPI was assigned. Rebalance to 100% and resubmit.
           </div>
         )}
 
         {/* ── Action Bar ──────────────────────────────────────── */}
-        <div className="flex items-center justify-between">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            <p style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>
               {goals.length} goal{goals.length !== 1 ? "s" : ""} · {cycle?.year}
             </p>
             {hasEditableGoals && Math.round(totalWeightage) !== 100 && goals.length > 0 && (
-              <p className="text-xs mt-1" style={{ color: "var(--status-submitted-text)" }}>
+              <p style={{ fontSize: 11, marginTop: 4, color: "#F59E0B" }}>
                 {totalWeightage.toFixed(1)}% / 100% — balance to exactly 100% to submit
               </p>
             )}
           </div>
-          <div className="flex gap-3">
+          <div style={{ display: "flex", gap: 10 }}>
             {goals.length < 8 && !allApproved && (
-              <button onClick={() => { setEditingGoal(null); setModalOpen(true); }}
-                className="btn">
-                <Plus size={13} /> Add Goal
+              <button onClick={() => { setEditingGoal(null); setModalOpen(true); }} className="admin-btn">
+                <Plus size={12} /> Add Goal
               </button>
             )}
             {canSubmit && (
-              <button onClick={handleSubmitAll} className="btn btn-confirm">
-                <Send size={13} /> Submit for Approval
+              <button onClick={handleSubmitAll} className="admin-btn admin-btn--primary">
+                <Send size={12} /> Submit for Approval
               </button>
             )}
           </div>
@@ -173,18 +169,18 @@ export default function EmployeeDashboard() {
 
         {/* ── Goals Grid ──────────────────────────────────────── */}
         {goals.length === 0 ? (
-          <div className="aq-card py-20 text-center" style={{ background: "var(--surface-elevated)", borderStyle: "dashed" }}>
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl border border-white/[0.06] flex items-center justify-center" style={{ background: "var(--surface-base)" }}>
-              <Target size={22} strokeWidth={1.25} style={{ color: "var(--text-disabled)" }} />
+          <div className="admin-glass" style={{ textAlign: "center", padding: "60px 24px", borderStyle: "dashed" }}>
+            <div style={{ margin: "0 auto 14px", width: 44, height: 44, borderRadius: 14, background: "rgba(8,20,47,0.90)", border: "1px solid rgba(255,255,255,0.06)", display: "grid", placeItems: "center" }}>
+              <Target size={20} strokeWidth={1.25} style={{ color: "#334155" }} />
             </div>
-            <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>No goals yet</h3>
-            <p className="mb-6 text-xs" style={{ color: "var(--text-muted)" }}>Add your first goal to get started for this cycle</p>
-            <button onClick={() => { setEditingGoal(null); setModalOpen(true); }} className="btn">
-              <Plus size={13} /> Add First Goal
+            <div className="admin-empty-title">No goals yet</div>
+            <div className="admin-empty-text" style={{ marginTop: 6, marginBottom: 20 }}>Add your first goal to get started for this cycle</div>
+            <button onClick={() => { setEditingGoal(null); setModalOpen(true); }} className="admin-btn">
+              <Plus size={12} /> Add First Goal
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 16 }}>
             {goals.map((goal) => (
               <GoalCard key={goal.id} goal={goal}
                 onEdit={(g) => { setEditingGoal(g); setModalOpen(true); }}
@@ -193,7 +189,6 @@ export default function EmployeeDashboard() {
             ))}
           </div>
         )}
-
       </div>
 
       <GoalFormModal

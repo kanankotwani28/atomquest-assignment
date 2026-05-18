@@ -53,9 +53,13 @@ export default function Analytics() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 bg-[#0a0a0a] border border-[#222222] rounded-lg">
-        <p className="text-[#c44a4a] font-medium text-sm mb-4">Failed to load analytics</p>
-        <button onClick={fetchAnalyticsData} className="btn btn-confirm py-1.5 px-4 text-xs">
+      <div className="admin-glass" style={{ textAlign: "center", padding: "48px 24px" }}>
+        <div className="admin-header-icon" style={{ margin: "0 auto 16px" }}>
+          <AlertTriangle size={16} strokeWidth={1.5} />
+        </div>
+        <p className="admin-empty-title">Failed to load analytics</p>
+        <p className="admin-empty-text" style={{ marginTop: 4 }}>Check your connection and retry</p>
+        <button onClick={fetchAnalyticsData} className="admin-btn admin-btn--primary" style={{ marginTop: 16 }}>
           Retry
         </button>
       </div>

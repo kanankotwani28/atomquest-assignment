@@ -14,11 +14,11 @@ const STATUS_STRIP = {
 };
 
 const STATUS_BADGE = {
-  APPROVED:          "status-approved",
-  SUBMITTED:         "status-submitted",
-  REVISION_REQUIRED: "status-revision-required",
-  RETURNED:          "status-returned",
-  DRAFT:             "status-draft",
+  APPROVED:          "admin-badge admin-badge--approve",
+  SUBMITTED:         "admin-badge admin-badge--submit",
+  REVISION_REQUIRED: "admin-badge admin-badge--submit",
+  RETURNED:          "admin-badge admin-badge--return",
+  DRAFT:             "admin-badge admin-badge--draft",
 };
 
 export default function GoalCard({ goal, onEdit, onDelete }) {
@@ -28,24 +28,20 @@ export default function GoalCard({ goal, onEdit, onDelete }) {
   const uom = goal.uomType || goal.uom_type;
 
   return (
-    <div className="aq-card relative overflow-hidden transition-all duration-200 hover:border-white/[0.1]"
-      style={{ borderLeft: `3px solid ${stripColor}` }}>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold leading-snug truncate"
-            style={{ color: "var(--text-primary)" }}>{goal.title}</h3>
-          <p className="label mt-1">
+    <div className="admin-glass" style={{ borderLeft: `3px solid ${stripColor}` }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: "#fff", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{goal.title}</h3>
+          <span className="admin-label" style={{ marginTop: 4, display: "block" }}>
             {goal.thrust_area?.name || goal.thrustArea?.name}
-          </p>
+          </span>
         </div>
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <span className={`status-badge ${STATUS_BADGE[goal.status] || "status-draft"}`}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+          <span className={`admin-badge ${STATUS_BADGE[goal.status] || "admin-badge--draft"}`}>
             {goal.isShared && goal.status !== "REVISION_REQUIRED" ? "SHARED" : goal.status}
           </span>
           {goal.isShared && (
-            <span className="text-[10px] px-2 py-0.5 rounded border text-[10px]"
-              style={{ borderColor: "rgba(99,102,241,0.2)", color: "var(--accent-light)", background: "var(--accent-glow)" }}>
+            <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, border: "1px solid rgba(99,102,241,0.2)", color: "#818CF8", background: "rgba(99,102,241,0.08)" }}>
               Manager KPI
             </span>
           )}
@@ -53,56 +49,49 @@ export default function GoalCard({ goal, onEdit, onDelete }) {
       </div>
 
       {goal.description && (
-        <p className="text-xs leading-relaxed mb-4" style={{ color: "var(--text-secondary)" }}>
+        <p style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 14, color: "#94A3B8" }}>
           {goal.description}
         </p>
       )}
 
-      {/* Metrics */}
-      <div className="grid grid-cols-3 gap-3 py-3 border-y border-white/[0.04]">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, padding: "12px 0", borderTop: "1px solid rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <div>
-          <p className="label mb-1">Measurement</p>
-          <p className="text-[12px] font-medium" style={{ color: "var(--text-secondary)" }}>
-            {UOM_LABELS[uom] || uom}
-          </p>
+          <span className="admin-label" style={{ marginBottom: 3, display: "block" }}>Measurement</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#94A3B8" }}>{UOM_LABELS[uom] || uom}</span>
         </div>
         <div>
-          <p className="label mb-1">Target</p>
-          <p className="mono text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>
+          <span className="admin-label" style={{ marginBottom: 3, display: "block" }}>Target</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: "#fff" }}>
             {uom === "ZERO" ? "0 incidents" : (goal.target !== undefined ? goal.target.toLocaleString() : "—")}
-          </p>
+          </span>
         </div>
         <div>
-          <p className="label mb-1">Weightage</p>
-          <p className="mono text-[12px] font-semibold" style={{ color: stripColor }}>
-            {goal.weightage}%
-          </p>
+          <span className="admin-label" style={{ marginBottom: 3, display: "block" }}>Weightage</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: stripColor }}>{goal.weightage}%</span>
         </div>
       </div>
 
-      {/* Notice */}
       {goal.status === "RETURNED" && (
-        <div className="notice-bar amber text-[11px] mt-3 py-2 px-3">
+        <div className="admin-notice admin-notice--red" style={{ marginTop: 10, fontSize: 11 }}>
           Returned: {goal.reason || "Please revise and resubmit."}
         </div>
       )}
       {goal.status === "REVISION_REQUIRED" && (
-        <div className="notice-bar amber text-[11px] mt-3 py-2 px-3">
+        <div className="admin-notice admin-notice--amber" style={{ marginTop: 10, fontSize: 11 }}>
           Revision required — rebalance weightages to 100% and resubmit for approval.
         </div>
       )}
       {goal.isShared && (
-        <div className="notice-bar indigo text-[11px] mt-3 py-2 px-3">
+        <div className="admin-notice" style={{ marginTop: 10, fontSize: 11, background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.15)", color: "#818CF8" }}>
           Shared KPI — title and target are locked; weightage can be adjusted.
         </div>
       )}
 
-      {/* Actions */}
       {canEdit && (
-        <div className="mt-4 flex gap-2">
-          <button onClick={() => onEdit(goal)} className="btn flex-1 text-xs py-2">Edit</button>
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <button onClick={() => onEdit(goal)} className="admin-btn" style={{ flex: 1 }}>Edit</button>
           {canDelete && (
-            <button onClick={() => onDelete(goal.id || goal._id)} className="btn btn-danger flex-shrink-0 text-xs py-2">Delete</button>
+            <button onClick={() => onDelete(goal.id || goal._id)} className="admin-btn admin-btn--sm danger">Delete</button>
           )}
         </div>
       )}

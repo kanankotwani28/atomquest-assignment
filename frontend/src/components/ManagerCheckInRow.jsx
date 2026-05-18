@@ -13,15 +13,7 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
   const checkInMap = {};
   const checkinsArray = goal.check_ins || goal.checkIns || [];
   for (const c of checkinsArray) {
-    checkInMap[c.quarter] = {
-      ...c,
-      completionDate: c.completionDate ?? c.completion_date,
-      progressStatus: c.progressStatus ?? c.progress_status,
-      managerComment: c.managerComment ?? c.manager_comment,
-      actual: c.actual,
-      score: c.score,
-      id: c.id,
-    };
+    checkInMap[c.quarter] = { ...c, completionDate: c.completionDate ?? c.completion_date, progressStatus: c.progressStatus ?? c.progress_status, managerComment: c.managerComment ?? c.manager_comment, actual: c.actual, score: c.score, id: c.id };
   }
 
   const latestCheckIn = checkinsArray.length ? checkinsArray[checkinsArray.length - 1] : null;
@@ -35,163 +27,112 @@ export default function ManagerCheckInRow({ goal, onUpdated }) {
       setCommentingOn(null);
       setComment("");
       onUpdated();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to save comment");
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { toast.error(err.response?.data?.error || "Failed to save comment"); }
+    finally { setSaving(false); }
   };
 
   const getProgressIndicator = (status) => {
     switch (status) {
-      case "COMPLETED":
-        return { symbol: "●", label: "Completed" };
-      case "ON_TRACK":
-        return { symbol: "◑", label: "On Track" };
-      default:
-        return { symbol: "○", label: "Not Started" };
+      case "COMPLETED": return { symbol: "●", label: "Completed" };
+      case "ON_TRACK":  return { symbol: "◑", label: "On Track" };
+      default:          return { symbol: "○", label: "Not Started" };
     }
   };
 
   const getStatusColorClass = (score) => {
-    if (score >= 80) return "bg-[#4d9966]";
-    if (score >= 60) return "bg-[#4a7ac4]";
-    if (score >= 40) return "bg-[#c49a2a]";
-    return "bg-[#c44a4a]";
+    if (score >= 80) return "#10B981";
+    if (score >= 60) return "#818CF8";
+    if (score >= 40) return "#F59E0B";
+    return "#EF4444";
   };
 
   return (
-    <div className="aq-card p-4 border border-[#222222]">
-      {/* Header section with title and overall score */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <div>
-          <h4 className="text-xs font-semibold text-[#f5f5f5]">{goal.title}</h4>
-          <p className="mt-1 text-[11px] text-[#909090]">
-            {goal.thrustArea?.name || goal.thrust_area?.name} · <span className="mono">{goal.weightage}% weight</span>
-          </p>
-        </div>
-        {latestCheckIn && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="mono text-xs text-[#909090]">Latest:</span>
-            <ScoreBadge score={latestCheckIn.score} />
+    <div style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "14px 12px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <h4 style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{goal.title}</h4>
+            <p style={{ fontSize: 11, color: "#475569", marginTop: 3 }}>
+              {goal.thrustArea?.name || goal.thrust_area?.name} · <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{goal.weightage}%</span>
+            </p>
           </div>
-        )}
-      </div>
+          {latestCheckIn && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, color: "#475569", fontFamily: "'JetBrains Mono', monospace" }}>Latest:</span>
+              <ScoreBadge score={latestCheckIn.score} />
+            </div>
+          )}
+        </div>
 
-      {/* Quarter Grid */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {QUARTERS.map((q) => {
-          const ci = checkInMap[q];
-          const indicator = ci ? getProgressIndicator(ci.progressStatus) : null;
-          return (
-            <div key={q} className="rounded-lg border border-[#222222] bg-[#0d0d0d] p-3 flex flex-col justify-between min-h-[140px]">
-              <div>
-                <div className="flex items-center justify-between border-b border-[#1c1c1c] pb-1.5 mb-2">
-                  <span className="label text-[#555555]">{q}</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          {QUARTERS.map((q) => {
+            const ci = checkInMap[q];
+            const indicator = ci ? getProgressIndicator(ci.progressStatus) : null;
+            return (
+              <div key={q} style={{ padding: 10, background: "rgba(8,20,47,0.80)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10, minHeight: 120 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 8, marginBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span className="admin-label">{q}</span>
                   {ci && (
-                    <div className="flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${getStatusColorClass(ci.score)}`} />
-                      <span className="mono text-[11px] text-[#f5f5f5]">{Number(ci.score || 0).toFixed(0)}%</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: getStatusColorClass(ci.score) }} />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#fff" }}>{Number(ci.score || 0).toFixed(0)}%</span>
                     </div>
                   )}
                 </div>
 
                 {ci ? (
-                  <div className="space-y-1.5 text-[11px]">
-                    <div className="flex justify-between">
-                      <span className="text-[#555555]">Planned</span>
-                      <span className="mono text-[#909090]">{goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: "#475569" }}>Planned</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#64748B" }}>{goal.uomType === "ZERO" ? "0" : goal.target?.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#555555]">Actual</span>
-                      <span className="mono text-[#e8e8e8]">
-                        {goal.uomType === "TIMELINE"
-                          ? ci.completionDate
-                            ? new Date(ci.completionDate).toLocaleDateString()
-                            : "-"
-                          : ci.actual !== null
-                            ? ci.actual?.toLocaleString()
-                            : "-"}
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: "#475569" }}>Actual</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#94A3B8" }}>
+                        {goal.uomType === "TIMELINE" ? (ci.completionDate ? new Date(ci.completionDate).toLocaleDateString() : "—") : (ci.actual !== null ? ci.actual?.toLocaleString() : "—")}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 mt-1 text-[#909090]">
-                      <span className="mono text-[9px] text-[#555555]">{indicator?.symbol}</span>
-                      <span>{indicator?.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, color: "#475569" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9 }}>{indicator?.symbol}</span>
+                      <span style={{ fontSize: 10 }}>{indicator?.label}</span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-[#555555] italic">No submission yet</p>
+                  <span style={{ fontSize: 10, color: "#334155" }}>No submission yet</span>
+                )}
+
+                {ci && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+                    {ci.managerComment ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <blockquote style={{ fontSize: 10, borderLeft: "2px solid #334155", paddingLeft: 8, color: "#64748B", fontStyle: "italic" }}>
+                          "{ci.managerComment}"
+                        </blockquote>
+                        <button onClick={() => { setCommentingOn(ci.id); setComment(ci.managerComment); }} style={{ fontSize: 10, color: "#475569", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>Edit</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setCommentingOn(ci.id); setComment(""); }} style={{ fontSize: 10, color: "#64748B", background: "none", border: "none", cursor: "pointer", padding: 0 }}>+ Add comment</button>
+                    )}
+                  </div>
                 )}
               </div>
-
-              {ci && (
-                <div className="mt-3 pt-2 border-t border-[#1c1c1c]/60">
-                  {ci.managerComment ? (
-                    <div className="space-y-1 text-[11px]">
-                      <blockquote className="border-l border-[#404040] bg-[#161616] px-2 py-1 italic text-[#909090] rounded-r">
-                        "{ci.managerComment}"
-                      </blockquote>
-                      <button
-                        onClick={() => {
-                          setCommentingOn(ci.id);
-                          setComment(ci.managerComment);
-                        }}
-                        className="text-[10px] text-[#555555] hover:text-[#909090] transition-colors"
-                      >
-                        Edit Comment
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setCommentingOn(ci.id);
-                        setComment("");
-                      }}
-                      className="text-[10px] text-[#909090] hover:text-[#f5f5f5] transition-colors"
-                    >
-                      + Add Comment
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Add/Edit comment form area */}
-      {commentingOn && (
-        <div className="mt-4 border-t border-[#222222] pt-4">
-          <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">
-            Add Comment / Feedback
-          </label>
-          <textarea
-            rows={3}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Document discussion or provide guidance..."
-            className="aq-input w-full resize-none min-h-[60px]"
-          />
-          <div className="mt-2 flex gap-2 justify-end">
-            <button
-              onClick={() => {
-                setCommentingOn(null);
-                setComment("");
-              }}
-              className="btn text-xs py-1"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={saveComment}
-              disabled={saving || !comment.trim()}
-              className="btn btn-confirm text-xs py-1"
-            >
-              {saving ? "Saving..." : "Save Comment"}
-            </button>
-          </div>
+            );
+          })}
         </div>
-      )}
+
+        {commentingOn && (
+          <div style={{ paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+            <span className="admin-label" style={{ display: "block", marginBottom: 6 }}>Add Comment / Feedback</span>
+            <textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Document discussion or provide guidance..." className="admin-input" style={{ minHeight: 60, height: "auto", paddingTop: 10 }} />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+              <button onClick={() => { setCommentingOn(null); setComment(""); }} className="admin-btn admin-btn--sm">Cancel</button>
+              <button onClick={saveComment} disabled={saving || !comment.trim()} className="admin-btn admin-btn--sm admin-btn--primary">
+                {saving ? "Saving..." : "Save Comment"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

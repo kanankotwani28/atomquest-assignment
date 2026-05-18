@@ -3,29 +3,27 @@ export default function WeightageBar({ goals }) {
   const remaining = Math.max(0, 100 - total);
 
   const getFillClass = (t) => {
-    if (Math.round(t) === 100) return "excellent";
-    if (t > 100) return "poor";
-    if (t >= 75) return "good";
-    if (t >= 50) return "warn";
-    return "poor";
+    if (Math.round(t) === 100) return "#10B981";
+    if (t > 100) return "#EF4444";
+    if (t >= 75) return "#818CF8";
+    if (t >= 50) return "#F59E0B";
+    return "#EF4444";
   };
 
-  const fillClass = getFillClass(total);
+  const fillColor = getFillClass(total);
   const pct = Math.min(total, 100);
 
   return (
-    <div className="aq-card p-5">
-      <div className="flex items-center justify-between gap-6 mb-3">
-        <div className="flex-1">
-          <div className="progress-track thick">
-            <div className={`progress-fill ${fillClass}`} style={{ width: `${pct}%` }} />
-          </div>
+    <div className="admin-glass" style={{ padding: "16px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
+        <div style={{ flex: 1, height: 8, background: "rgba(255,255,255,0.05)", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: 4, background: `linear-gradient(90deg, ${fillColor}, ${fillColor}CC)`, width: `${pct}%`, transition: "width 500ms ease" }} />
         </div>
-        <p className="number-medium whitespace-nowrap" style={{ color: Math.round(total) === 100 ? "var(--score-excellent)" : total > 100 ? "var(--score-poor)" : "var(--text-primary)" }}>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, fontWeight: 700, color: Math.round(total) === 100 ? "#10B981" : total > 100 ? "#EF4444" : "#fff", letterSpacing: "-0.03em", whiteSpace: "nowrap" }}>
           {total.toFixed(1)}%
-        </p>
+        </span>
       </div>
-      <p className="micro">
+      <p style={{ fontSize: 11, color: "#64748B" }}>
         {goals.length} of 8 goals ·{" "}
         {total > 100
           ? `Exceeds by ${(total - 100).toFixed(1)}%`

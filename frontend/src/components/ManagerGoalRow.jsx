@@ -9,13 +9,15 @@ const UOM_LABELS = {
   ZERO: "Zero = Success",
 };
 
-const statusClass = (status) => `status-badge ${String(status || "DRAFT").toLowerCase().replaceAll("_", "-")}`;
+const STATUS_BADGE = {
+  APPROVED:          "admin-badge admin-badge--approve",
+  SUBMITTED:         "admin-badge admin-badge--submit",
+  REVISION_REQUIRED: "admin-badge admin-badge--submit",
+  RETURNED:          "admin-badge admin-badge--return",
+  DRAFT:             "admin-badge admin-badge--draft",
+};
 
 export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
-  const [fields, setFields] = useState({
-    target: goal.target,
-    weightage: goal.weightage
-  });
   const [saving, setSaving] = useState(false);
   const canEdit = goal.status === "SUBMITTED";
 
@@ -27,8 +29,6 @@ export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
       onUpdated();
     } catch (err) {
       toast.error(err.response?.data?.error || "Update failed");
-      // Reset fields on error
-      setFields({ target: goal.target, weightage: goal.weightage });
     } finally {
       setSaving(false);
     }
@@ -37,68 +37,51 @@ export default function ManagerGoalRow({ goal, onUpdated, onReturn }) {
   const handleBlurTarget = async (e) => {
     const val = parseFloat(e.target.value);
     if (isNaN(val) || val === goal.target) return;
-    const newFields = { ...fields, target: val };
-    setFields(newFields);
-    await saveEdit(newFields);
+    await saveEdit({ target: val });
   };
 
   const handleBlurWeightage = async (e) => {
     const val = parseFloat(e.target.value);
     if (isNaN(val) || val < 10 || val > 100 || val === goal.weightage) {
-      if (val < 10 || val > 100) {
-        toast.error("Weightage must be between 10% and 100%");
-      }
-      setFields({ ...fields, weightage: goal.weightage });
+      if (val < 10 || val > 100) toast.error("Weightage must be between 10% and 100%");
       return;
     }
-    const newFields = { ...fields, weightage: val };
-    setFields(newFields);
-    await saveEdit(newFields);
+    await saveEdit({ weightage: val });
   };
 
   return (
-    <tr className="hover:bg-[#161616]/50 transition-colors">
-      <td className="text-[#f5f5f5] font-medium text-xs max-w-[200px] truncate py-3">{goal.title}</td>
-      <td className="text-xs text-[#909090] py-3">{goal.thrustArea?.name || goal.thrust_area?.name}</td>
-      <td className="mono text-xs text-[#909090] py-3">{UOM_LABELS[goal.uomType || goal.uom_type]}</td>
-      <td className="py-3">
+    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+      <td style={{ padding: "10px 12px" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: "#fff", maxWidth: 200, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{goal.title}</span>
+      </td>
+      <td style={{ padding: "10px 12px" }}><span style={{ fontSize: 11, color: "#64748B" }}>{goal.thrustArea?.name || goal.thrust_area?.name}</span></td>
+      <td style={{ padding: "10px 12px" }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#64748B" }}>{UOM_LABELS[goal.uomType || goal.uom_type]}</span></td>
+      <td style={{ padding: "10px 12px" }}>
         {canEdit ? (
-          <input
-            type="number"
-            step="any"
-            defaultValue={goal.target}
-            onBlur={handleBlurTarget}
-            disabled={saving}
-            className="w-24 px-1.5 py-0.5 bg-transparent border border-transparent hover:border-[#222222] focus:border-[#404040] focus:bg-[#0a0a0a] rounded text-xs mono text-[#e8e8e8] transition-all focus:outline-none"
+          <input type="number" step="any" defaultValue={goal.target} onBlur={handleBlurTarget} disabled={saving}
+            style={{ width: 80, padding: "3px 6px", background: "transparent", border: "1px solid transparent", borderRadius: 5, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#fff", outline: "none" }}
+            onFocus={(e) => e.target.style.borderColor = "rgba(99,102,241,0.3)"}
+            onBlur={(e) => { handleBlurTarget(e); e.target.style.borderColor = "transparent"; }}
           />
         ) : (
-          <span className="mono text-xs text-[#e8e8e8]">{goal.uomType === "ZERO" ? "0" : goal.target.toLocaleString()}</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#94A3B8" }}>{goal.uomType === "ZERO" ? "0" : goal.target?.toLocaleString()}</span>
         )}
       </td>
-      <td className="py-3">
+      <td style={{ padding: "10px 12px" }}>
         {canEdit ? (
-          <input
-            type="number"
-            min="10"
-            max="100"
-            defaultValue={goal.weightage}
-            onBlur={handleBlurWeightage}
-            disabled={saving}
-            className="w-16 px-1.5 py-0.5 bg-transparent border border-transparent hover:border-[#222222] focus:border-[#404040] focus:bg-[#0a0a0a] rounded text-xs mono text-[#e8e8e8] transition-all focus:outline-none"
+          <input type="number" min="10" max="100" defaultValue={goal.weightage} onBlur={handleBlurWeightage} disabled={saving}
+            style={{ width: 64, padding: "3px 6px", background: "transparent", border: "1px solid transparent", borderRadius: 5, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#fff", outline: "none" }}
+            onFocus={(e) => e.target.style.borderColor = "rgba(99,102,241,0.3)"}
+            onBlur={(e) => { handleBlurWeightage(e); e.target.style.borderColor = "transparent"; }}
           />
         ) : (
-          <span className="mono text-xs text-[#e8e8e8]">{goal.weightage}%</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#94A3B8" }}>{goal.weightage}%</span>
         )}
       </td>
-      <td className="py-3">
-        <span className={statusClass(goal.status)}>{goal.status}</span>
-      </td>
-      <td className="text-right py-3 pr-4">
+      <td style={{ padding: "10px 12px" }}><span className={`admin-badge ${STATUS_BADGE[goal.status] || "admin-badge--draft"}`}>{goal.status}</span></td>
+      <td style={{ padding: "10px 12px", textAlign: "right" }}>
         {canEdit && (
-          <button
-            onClick={() => onReturn(goal)}
-            className="text-xs font-medium text-[#c44a4a] hover:text-[#e55a5a] transition-colors"
-          >
+          <button onClick={() => onReturn(goal)} style={{ fontSize: 11, fontWeight: 500, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>
             Return
           </button>
         )}

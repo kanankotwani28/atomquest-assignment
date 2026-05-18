@@ -30,6 +30,7 @@ class ProgressStatusEnum(str, enum.Enum):
 class UoMTypeEnum(str, enum.Enum):
     NUMERIC_MIN = "NUMERIC_MIN"
     NUMERIC_MAX = "NUMERIC_MAX"
+    PERCENTAGE  = "PERCENTAGE"
     TIMELINE    = "TIMELINE"
     ZERO        = "ZERO"
 

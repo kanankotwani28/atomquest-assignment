@@ -30,8 +30,10 @@ export default function EmployeeCheckIns() {
   useEffect(() => { fetchData(); }, []);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--surface-base)" }}>
-      <div className="skeleton h-4 w-44 rounded" />
+    <div className="admin-page">
+      <div className="admin-inner" style={{ alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <div className="skeleton" style={{ height: 16, width: 180, borderRadius: 8 }} />
+      </div>
     </div>
   );
 
@@ -46,28 +48,25 @@ export default function EmployeeCheckIns() {
     <AppShell user={user} logout={logout} title="Quarterly Check-ins" subtitle={subtitle}>
       <Toaster position="top-right" toastOptions={{ className: "toast-dark" }} />
 
-      <div className="space-y-6">
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {showClosed && (
-          <div className="notice-bar amber text-sm">
+          <div className="admin-notice admin-notice--amber">
             Check-in window is currently closed — contact your administrator to open one.
           </div>
         )}
 
         {goals.length === 0 ? (
-          <div className="aq-card py-20 text-center" style={{ background: "var(--surface-elevated)", borderStyle: "dashed" }}>
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl border border-white/[0.06] flex items-center justify-center"
-              style={{ background: "var(--surface-base)" }}>
-              <ClipboardCheck size={22} strokeWidth={1.25} style={{ color: "var(--text-disabled)" }} />
+          <div className="admin-glass" style={{ textAlign: "center", padding: "60px 24px", borderStyle: "dashed" }}>
+            <div style={{ margin: "0 auto 14px", width: 44, height: 44, borderRadius: 14, background: "rgba(8,20,47,0.90)", border: "1px solid rgba(255,255,255,0.06)", display: "grid", placeItems: "center" }}>
+              <ClipboardCheck size={20} strokeWidth={1.25} style={{ color: "#334155" }} />
             </div>
-            <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-              No approved goals yet
-            </h3>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            <div className="admin-empty-title">No approved goals yet</div>
+            <div className="admin-empty-text" style={{ marginTop: 6 }}>
               Check-ins are available once your manager approves your goals.
-            </p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {goals.map((goal) => (
               <GoalCheckInCard key={goal.id} goal={goal} currentQuarter={currentQuarter}
                 allowCheckinOutsideWindow={allowCheckinOutsideWindow}

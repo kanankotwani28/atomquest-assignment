@@ -12,8 +12,9 @@ const PROGRESS_OPTIONS = [
 const UOM_LABELS = {
   NUMERIC_MIN: "Higher is better",
   NUMERIC_MAX: "Lower is better",
-  TIMELINE: "Completion date",
-  ZERO: "Zero = Success",
+  PERCENTAGE:  "Target is a %",
+  TIMELINE:    "Completion date",
+  ZERO:        "Zero = Success",
 };
 
 export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, canEdit = true }) {
@@ -29,17 +30,12 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
   const [saving, setSaving] = useState(false);
 
   const uom = goal.uomType || goal.uom_type;
-  
+
   const previewScore = () => {
     if (uom === "ZERO") return actual === "" ? null : parseFloat(actual) === 0 ? 100 : 0;
-    if (uom === "NUMERIC_MIN") {
-      if (!actual || !goal.target) return null;
-      return parseFloat(((parseFloat(actual) / goal.target) * 100).toFixed(2));
-    }
-    if (uom === "NUMERIC_MAX") {
-      if (!actual || parseFloat(actual) === 0) return null;
-      return parseFloat(((goal.target / parseFloat(actual)) * 100).toFixed(2));
-    }
+    if (uom === "NUMERIC_MIN") { if (!actual || !goal.target) return null; return parseFloat(((parseFloat(actual) / goal.target) * 100).toFixed(2)); }
+    if (uom === "NUMERIC_MAX") { if (!actual || parseFloat(actual) === 0) return null; return parseFloat(((goal.target / parseFloat(actual)) * 100).toFixed(2)); }
+    if (uom === "PERCENTAGE") { if (!actual || !goal.target) return null; return parseFloat(Math.min(100, ((parseFloat(actual) / goal.target) * 100)).toFixed(2)); }
     if (uom === "TIMELINE") {
       if (!completionDate) return null;
       const deadline = new Date(goal.target);
@@ -53,114 +49,66 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
 
   const handleSave = async () => {
     if (!canEdit) return;
-
     const payload = {
-      goal_id: goal.id || goal._id,
-      quarter,
+      goal_id: goal.id || goal._id, quarter,
       actual: uom !== "TIMELINE" ? (actual === "" ? undefined : parseFloat(actual)) : undefined,
       completion_date: uom === "TIMELINE" && completionDate ? new Date(completionDate).toISOString() : undefined,
       progress_status: progressStatus,
     };
-
     setSaving(true);
-    try {
-      await upsertCheckIn(payload);
-      toast.success(`${quarter} check-in saved`);
-      onSaved();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save");
-    } finally {
-      setSaving(false);
-    }
+    try { await upsertCheckIn(payload); toast.success(`${quarter} check-in saved`); onSaved(); }
+    catch (err) { toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to save"); }
+    finally { setSaving(false); }
   };
 
   const liveScore = previewScore();
   const isTimeline = uom === "TIMELINE";
   const scorePct = liveScore ?? existingCheckIn?.score ?? 0;
-  
-  const getProgressFillClass = (score) => {
-    if (score >= 80) return "excellent";
-    if (score >= 60) return "good";
-    if (score >= 40) return "warn";
-    return "poor";
+
+  const getProgressColor = (score) => {
+    if (score >= 80) return "#10B981";
+    if (score >= 60) return "#818CF8";
+    if (score >= 40) return "#F59E0B";
+    return "#EF4444";
   };
-  
-  const fillClass = getProgressFillClass(scorePct);
+
+  const fillColor = getProgressColor(scorePct);
 
   const formatTimelineTarget = (targetVal) => {
-    try {
-      return new Date(targetVal).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch (e) {
-      return targetVal;
-    }
+    try { return new Date(targetVal).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch (e) { return targetVal; }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Progress tracker inside check-in form */}
-      <div className="flex items-center gap-3">
-        <div className="progress-track flex-1">
-          <div className={`progress-fill ${fillClass}`} style={{ width: `${Math.min(scorePct, 100)}%` }} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg, ${fillColor}, ${fillColor}CC)`, width: `${Math.min(scorePct, 100)}%`, transition: "width 500ms ease" }} />
         </div>
-        <span className="mono text-xs text-[#f5f5f5] w-12 text-right">
-          {scorePct.toFixed(1)}%
-        </span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#fff", width: 48, textAlign: "right" }}>{scorePct.toFixed(1)}%</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Input/date block */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">
-            {isTimeline ? "Completion Date" : "Actual Achievement"}
-          </label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span className="admin-label">{isTimeline ? "Completion Date" : "Actual Achievement"}</span>
           {isTimeline ? (
-            <input
-              type="date"
-              value={completionDate}
-              onChange={(e) => setCompletionDate(e.target.value)}
-              disabled={!canEdit}
-              className="aq-input w-full"
-            />
+            <input type="date" value={completionDate} onChange={(e) => setCompletionDate(e.target.value)} disabled={!canEdit} className="admin-input" style={{ fontSize: 12 }} />
           ) : (
-            <input
-              type="number"
-              step="any"
-              value={actual}
-              onChange={(e) => setActual(e.target.value)}
-              disabled={!canEdit}
-              placeholder={uom === "ZERO" ? "0" : "Enter actual value"}
-              className="aq-input w-full"
-            />
+            <input type="number" step="any" value={actual} onChange={(e) => setActual(e.target.value)} disabled={!canEdit} placeholder={uom === "ZERO" ? "0" : "Enter actual value"} className="admin-input" style={{ fontSize: 12 }} />
           )}
-          <p className="mt-1.5 text-[11px] text-[#555555]">
-            {UOM_LABELS[uom]} · Target: {isTimeline ? formatTimelineTarget(goal.target) : (uom === "ZERO" ? "0" : goal.target.toLocaleString())}
-          </p>
+          <span style={{ fontSize: 10, color: "#475569" }}>
+            {UOM_LABELS[uom]} · Target: {isTimeline ? formatTimelineTarget(goal.target) : (uom === "ZERO" ? "0" : goal.target?.toLocaleString())}
+          </span>
         </div>
 
-        {/* 3-Button toggle for progress status */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em] mb-1.5">
-            Progress Status
-          </label>
-          <div className="flex gap-1 bg-[#0d0d0d] border border-[#222222] p-[3px] rounded-lg h-9">
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span className="admin-label">Progress Status</span>
+          <div style={{ display: "flex", gap: 4, padding: 3, background: "rgba(8,20,47,0.80)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, height: 40 }}>
             {PROGRESS_OPTIONS.map((opt) => {
               const isSelected = progressStatus === opt.value;
               return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  disabled={!canEdit}
-                  onClick={() => setProgressStatus(opt.value)}
-                  className={`flex-1 text-center text-xs font-medium rounded-md transition-all ${
-                    isSelected
-                      ? "bg-[#1e1e1e] border border-[#333333] text-[#f5f5f5]"
-                      : "text-[#555555] hover:text-[#909090] disabled:opacity-40"
-                  }`}
-                >
+                <button key={opt.value} type="button" disabled={!canEdit} onClick={() => setProgressStatus(opt.value)}
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 500, borderRadius: 6, border: "none", cursor: "pointer", transition: "all 150ms ease", background: isSelected ? "rgba(11,22,55,0.95)" : "transparent", color: isSelected ? "#fff" : "#475569" }}>
                   {opt.label}
                 </button>
               );
@@ -169,30 +117,22 @@ export default function CheckInForm({ goal, quarter, existingCheckIn, onSaved, c
         </div>
       </div>
 
-      {/* Live score preview */}
       {liveScore !== null && (
-        <div className="score-preview-box">
-          <span className="text-[11px] font-semibold text-[#909090] uppercase tracking-[0.06em]">
-            Live Score Preview
-          </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(8,20,47,0.80)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10 }}>
+          <span className="admin-label">Live Score Preview</span>
           <ScoreBadge score={liveScore} />
         </div>
       )}
 
-      {/* Manager comment block */}
       {existingCheckIn?.managerComment && (
-        <div className="border-l-[3px] border-[#5a4a1a] bg-[#161616] px-4 py-3 rounded-r-lg space-y-1">
-          <p className="text-[11px] font-semibold text-[#c49a2a] uppercase tracking-[0.06em]">Manager Feedback</p>
-          <p className="text-xs text-[#909090] italic leading-relaxed">"{existingCheckIn.managerComment}"</p>
+        <div style={{ borderLeft: "3px solid #F59E0B", paddingLeft: 12, marginTop: 4 }}>
+          <span className="admin-label" style={{ color: "#F59E0B", display: "block", marginBottom: 4 }}>Manager Feedback</span>
+          <p style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>"{existingCheckIn.managerComment}"</p>
         </div>
       )}
 
-      {/* Save Button */}
-      <button
-        onClick={handleSave}
-        disabled={!canEdit || saving || (actual === "" && !completionDate)}
-        className="btn btn-confirm w-full mt-2"
-      >
+      <button onClick={handleSave} disabled={!canEdit || saving || (actual === "" && !completionDate)}
+        className="admin-btn admin-btn--primary" style={{ width: "100%", justifyContent: "center" }}>
         {!canEdit ? "Check-in window closed" : saving ? "Saving..." : existingCheckIn ? "Update Check-in" : "Save Check-in"}
       </button>
     </div>

@@ -58,12 +58,13 @@ class GoalCreate(BaseModel):
 
     @model_validator(mode='after')
     def check_zero_uom_target(self):
-        # If UoM is ZERO, target MUST be 0 — anything else makes no sense
         if self.uom_type == UoMTypeEnum.ZERO and self.target != 0:
             raise ValueError("Target must be 0 for ZERO-type goals")
-        # If UoM is NOT ZERO, target must be positive
-        if self.uom_type != UoMTypeEnum.ZERO and self.target <= 0:
+        if self.uom_type != UoMTypeEnum.ZERO and self.uom_type != UoMTypeEnum.PERCENTAGE and self.target <= 0:
             raise ValueError("Target must be greater than 0 for this UoM type")
+        # PERCENTAGE: target must be between 0 and 100
+        if self.uom_type == UoMTypeEnum.PERCENTAGE and (self.target <= 0 or self.target > 100):
+            raise ValueError("Target must be between 0 and 100 for PERCENTAGE goals")
         return self
 
 class GoalUpdate(BaseModel):
