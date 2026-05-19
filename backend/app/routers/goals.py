@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -97,7 +98,12 @@ def create_goal(body: GoalCreate,
 def update_goal(goal_id: str, body: GoalUpdate,
                 db: Session = Depends(get_db),
                 current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
-    goal = db.query(Goal).filter(Goal.id == goal_id).first()
+    try:
+        goal_uuid = uuid.UUID(goal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+
+    goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     if str(goal.owner_id) != str(current_user.id):
@@ -144,7 +150,12 @@ def update_goal(goal_id: str, body: GoalUpdate,
 def delete_goal(goal_id: str,
                 db: Session = Depends(get_db),
                 current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
-    goal = db.query(Goal).filter(Goal.id == goal_id).first()
+    try:
+        goal_uuid = uuid.UUID(goal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+
+    goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     if str(goal.owner_id) != str(current_user.id):
@@ -335,8 +346,13 @@ def approve_goals(payload: dict,
     if not employee_id:
         raise HTTPException(400, "employeeId required")
 
+    try:
+        employee_uuid = uuid.UUID(employee_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid employee ID format")
+
     employee = db.query(User).filter(
-        User.id == employee_id,
+        User.id == employee_uuid,
         User.manager_id == current_user.id
     ).first()
     if not employee:
@@ -345,7 +361,7 @@ def approve_goals(payload: dict,
     cycle = get_active_cycle(db)
 
     blocking_goals = db.query(Goal).filter(
-        Goal.owner_id == employee_id,
+        Goal.owner_id == employee_uuid,
         Goal.cycle_id == cycle.id,
         Goal.status.in_([
             GoalStatusEnum.RETURNED,
@@ -361,7 +377,7 @@ def approve_goals(payload: dict,
                    f"resubmission: {', '.join(blocking_titles)}")
 
     submitted = db.query(Goal).filter(
-        Goal.owner_id == employee_id,
+        Goal.owner_id == employee_uuid,
         Goal.cycle_id == cycle.id,
         Goal.status == GoalStatusEnum.SUBMITTED
     ).all()
@@ -370,7 +386,7 @@ def approve_goals(payload: dict,
         raise HTTPException(400, "No submitted goals to approve")
 
     approved = db.query(Goal).filter(
-        Goal.owner_id == employee_id,
+        Goal.owner_id == employee_uuid,
         Goal.cycle_id == cycle.id,
         Goal.status == GoalStatusEnum.APPROVED
     ).all()
@@ -379,7 +395,7 @@ def approve_goals(payload: dict,
 
     # Check total across ALL goals including already-approved shared goals
     all_goals = db.query(Goal).filter(
-        Goal.owner_id == employee_id,
+        Goal.owner_id == employee_uuid,
         Goal.cycle_id == cycle.id
     ).all()
 
@@ -408,7 +424,12 @@ def return_goal(goal_id: str, payload: dict,
     if not reason:
         raise HTTPException(status_code=400, detail="Return reason is required")
 
-    goal = db.query(Goal).filter(Goal.id == goal_id).first()
+    try:
+        goal_uuid = uuid.UUID(goal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+
+    goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     if goal.status != GoalStatusEnum.SUBMITTED:
@@ -426,7 +447,12 @@ def return_goal(goal_id: str, payload: dict,
 def manager_edit_goal(goal_id: str, body: ManagerGoalEdit,
                       db: Session = Depends(get_db),
                       current_user: User = Depends(require_role(RoleEnum.MANAGER))):
-    goal = db.query(Goal).filter(Goal.id == goal_id).first()
+    try:
+        goal_uuid = uuid.UUID(goal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+
+    goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     if str(goal.owner.manager_id) != str(current_user.id):

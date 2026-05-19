@@ -44,6 +44,12 @@ const DEMO_ACCOUNTS = [
     email: 'employee@atomquest.com',
   },
   {
+    title: 'Employee',
+    subtitle: 'Sales team member',
+    icon: Briefcase,
+    email: 'meera@atomquest.com',
+  },
+  {
     title: 'Manager',
     subtitle: 'Team oversight',
     icon: Users,
@@ -294,21 +300,6 @@ export default function Login() {
 
               <div className="flex-1 h-px bg-white/10" />
             </div>
-
-            {/* Microsoft Button */}
-            <button
-              type="button"
-              className="w-full h-[50px] rounded-xl bg-[#08142F] border border-white/10 hover:bg-[#0B1838] transition-all duration-300 flex items-center justify-center gap-3 text-[0.9rem] font-semibold"
-            >
-              <div className="grid grid-cols-2 gap-[2px] w-4 h-4">
-                <div className="bg-red-500" />
-                <div className="bg-green-500" />
-                <div className="bg-blue-500" />
-                <div className="bg-yellow-400" />
-              </div>
-
-              Continue with Microsoft
-            </button>
 
             {/* Mobile Quick Access Demos */}
             <div className="mt-6 lg:hidden">

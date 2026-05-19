@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -301,7 +302,12 @@ def get_audit_logs(page: int = 1, page_size: int = 50,
 def unlock_goal(goal_id: str,
                 db: Session = Depends(get_db),
                 current_user: User = Depends(require_role(RoleEnum.ADMIN))):
-    goal = db.query(Goal).filter(Goal.id == goal_id).first()
+    try:
+        goal_uuid = uuid.UUID(goal_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid goal ID format")
+
+    goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
         raise HTTPException(404, "Goal not found")
     goal.status    = GoalStatusEnum.DRAFT
@@ -322,7 +328,16 @@ def push_shared_goal(body: SharedGoalPush,
     blocked = []
 
     for emp_id in body.employee_ids:
-        emp = db.query(User).filter(User.id == str(emp_id)).first()
+        try:
+            emp_uuid = uuid.UUID(str(emp_id))
+        except ValueError:
+            blocked.append({
+                "employee_id": str(emp_id),
+                "reason": "Invalid employee ID format"
+            })
+            continue
+
+        emp = db.query(User).filter(User.id == emp_uuid).first()
         if not emp:
             blocked.append({
                 "employee_id": str(emp_id),
@@ -331,12 +346,12 @@ def push_shared_goal(body: SharedGoalPush,
             continue
 
         total_all = db.query(func.sum(Goal.weightage)).filter(
-            Goal.owner_id == str(emp_id),
+            Goal.owner_id == emp_uuid,
             Goal.cycle_id == cycle.id
         ).scalar() or 0
 
         total_approved = db.query(func.sum(Goal.weightage)).filter(
-            Goal.owner_id == str(emp_id),
+            Goal.owner_id == emp_uuid,
             Goal.cycle_id == cycle.id,
             Goal.status == GoalStatusEnum.APPROVED
         ).scalar() or 0
@@ -650,12 +665,21 @@ def list_users(db: Session = Depends(get_db),
 def update_manager(user_id: str, payload: dict,
                    db: Session = Depends(get_db),
                    _=Depends(require_role(RoleEnum.ADMIN))):
-    user = db.query(User).filter(User.id == user_id).first()
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid user ID format")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
         raise HTTPException(404, "User not found")
     manager_id = payload.get("manager_id")
     if manager_id:
-        manager = db.query(User).filter(User.id == manager_id).first()
+        try:
+            manager_uuid = uuid.UUID(manager_id)
+        except ValueError:
+            raise HTTPException(400, "Invalid manager ID format")
+        manager = db.query(User).filter(User.id == manager_uuid).first()
         if not manager:
             raise HTTPException(404, "Manager not found")
         if str(manager.id) == str(user.id):

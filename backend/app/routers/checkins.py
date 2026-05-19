@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -50,7 +51,8 @@ def upsert_checkin(body: CheckInCreate,
                    db: Session = Depends(get_db),
                    current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
     try:
-        goal = db.query(Goal).filter(Goal.id == str(body.goal_id)).first()
+        goal_uuid = uuid.UUID(str(body.goal_id))
+        goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
         if not goal:
             raise HTTPException(404, "Goal not found")
         if str(goal.owner_id) != str(current_user.id):
