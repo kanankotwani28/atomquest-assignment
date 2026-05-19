@@ -58,49 +58,46 @@ def upsert_checkin(body: CheckInCreate,
     goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
         raise HTTPException(404, "Goal not found")
-        if str(goal.owner_id) != str(current_user.id):
-            raise HTTPException(403, "Not your goal")
-        if goal.status != GoalStatusEnum.APPROVED:
-            raise HTTPException(400, "Check-ins only allowed on approved goals")
 
-        cycle_obj = get_active_cycle(db)
-        current_quarter = cycle_obj.current_quarter
-        if not settings.allow_checkin_outside_window:
-            if not cycle_obj.checkin_window_open:
-                raise HTTPException(400, "Check-in window is closed. Admin has not opened it.")
-            if cycle_obj.current_quarter and body.quarter != cycle_obj.current_quarter:
-                raise HTTPException(
-                    400,
-                    f"{body.quarter} check-in is not open. Current open window is {cycle_obj.current_quarter}."
-                )
-        else:
-            current_quarter = body.quarter or current_quarter
+    if str(goal.owner_id) != str(current_user.id):
+        raise HTTPException(403, "Not your goal")
 
-        score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
+    if goal.status != GoalStatusEnum.APPROVED:
+        raise HTTPException(400, "Check-ins only allowed on approved goals")
 
-        if goal.is_shared and goal.shared_from_id:
-            if str(goal.id) != str(goal.shared_from_id):
-                raise HTTPException(403, "Shared KPI achievement updates can be entered only by the primary owner.")
+    cycle_obj = get_active_cycle(db)
+    current_quarter = cycle_obj.current_quarter
+    if not settings.allow_checkin_outside_window:
+        if not cycle_obj.checkin_window_open:
+            raise HTTPException(400, "Check-in window is closed. Admin has not opened it.")
+        if cycle_obj.current_quarter and body.quarter != cycle_obj.current_quarter:
+            raise HTTPException(
+                400,
+                f"{body.quarter} check-in is not open. Current open window is {cycle_obj.current_quarter}."
+            )
+    else:
+        current_quarter = body.quarter or current_quarter
 
-        saved = upsert_checkin_record(db, goal, body, score)
+    score = calculate_score(goal.uom_type, goal.target, body.actual, body.completion_date)
 
-        if goal.is_shared and goal.shared_from_id:
-            linked_goals = db.query(Goal).filter(
-                Goal.shared_from_id == goal.shared_from_id,
-                Goal.id != goal.id
-            ).all()
-            for linked_goal in linked_goals:
-                linked_score = calculate_score(linked_goal.uom_type, linked_goal.target, body.actual, body.completion_date)
-                upsert_checkin_record(db, linked_goal, body, linked_score)
+    if goal.is_shared and goal.shared_from_id:
+        if str(goal.id) != str(goal.shared_from_id):
+            raise HTTPException(403, "Shared KPI achievement updates can be entered only by the primary owner.")
 
-        db.commit()
-        db.refresh(saved)
-        return saved
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(500, str(e))
+    saved = upsert_checkin_record(db, goal, body, score)
+
+    if goal.is_shared and goal.shared_from_id:
+        linked_goals = db.query(Goal).filter(
+            Goal.shared_from_id == goal.shared_from_id,
+            Goal.id != goal.id
+        ).all()
+        for linked_goal in linked_goals:
+            linked_score = calculate_score(linked_goal.uom_type, linked_goal.target, body.actual, body.completion_date)
+            upsert_checkin_record(db, linked_goal, body, linked_score)
+
+    db.commit()
+    db.refresh(saved)
+    return saved
 
 # ── Employee: get my check-ins ────────────────────────────────────
 @router.get("/my")

@@ -342,7 +342,7 @@ def push_team_shared_goal(body: SharedGoalPush,
 def approve_goals(payload: dict,
                   db: Session = Depends(get_db),
                   current_user: User = Depends(require_role(RoleEnum.MANAGER))):
-employee_id = payload.get("employeeId")
+    employee_id = payload.get("employeeId")
     if not employee_id:
         raise HTTPException(400, "employeeId required")
 
@@ -383,19 +383,7 @@ employee_id = payload.get("employeeId")
     ).all()
 
     if not submitted:
-        # Check what's actually there
-        all_goals = db.query(Goal).filter(
-            Goal.owner_id == employee_uuid,
-            Goal.cycle_id == cycle.id
-        ).all()
-        if not all_goals:
-            raise HTTPException(400, "No goals found for this employee")
-        
-        status_counts = {}
-        for g in all_goals:
-            key = str(g.status.value) if g.status else "None"
-            status_counts[key] = status_counts.get(key, 0) + 1
-        raise HTTPException(400, f"No submitted goals to approve. Current statuses: {status_counts}")
+        raise HTTPException(400, "No submitted goals to approve")
 
     # Check total across ALL goals including already-approved shared goals
     all_goals = db.query(Goal).filter(
