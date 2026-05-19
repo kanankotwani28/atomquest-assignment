@@ -72,8 +72,10 @@ const [loading, setLoading]         = useState(true);
         ));
         try { const res = await approveGoals(employeeId); toast.success(res.data.message); }
         catch (err) {
+          console.error("Approve error:", err);
           setTeam(snapshot);
-          toast.error(err.response?.data?.error || "Approval failed");
+          const errorMsg = err.response?.data?.detail || err.response?.data?.error || err.message || "Approval failed";
+          toast.error(errorMsg);
         } finally { await fetchTeam(); }
       },
     });

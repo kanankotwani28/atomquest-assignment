@@ -44,6 +44,7 @@ def seed():
                        role=RoleEnum.EMPLOYEE, department=dept, manager_id=manager.id))
         else:
             emp.password = hash_password("password123")
+            emp.manager_id = manager.id
             db.flush()
 
     # ── Thrust Areas ───────────────────────────────────────────────

@@ -349,7 +349,12 @@ def approve_goals(payload: dict,
     try:
         employee_uuid = uuid.UUID(employee_id)
     except ValueError:
-        raise HTTPException(400, "Invalid employee ID format")
+        raise HTTPException(400, f"Invalid employee ID format: {employee_id}")
+
+    employee = db.query(User).filter(
+        User.id == employee_uuid,
+        User.manager_id == current_user.id
+    ).first()
 
     employee = db.query(User).filter(
         User.id == employee_uuid,
