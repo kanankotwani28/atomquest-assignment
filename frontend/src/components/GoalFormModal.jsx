@@ -76,15 +76,22 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
     return unsubscribe;
   }, [watch]);
   const selectedUom = UOM_OPTIONS.find((opt) => opt.value === uomType);
-  const used = Math.min(weightageVal, 100);
-  const isExact = weightageVal === remainingWeightage;
-  const isOver = weightageVal > remainingWeightage;
+  const weightageNum = parseFloat(weightageVal) || 0;
+  const used = Math.min(weightageNum, 100);
+  const isExact = weightageNum === remainingWeightage;
+  const isOver = weightageNum > remainingWeightage;
 
   const onSubmit = async (data) => {
     try {
       const payload = weightageOnly ? { weightage: data.weightage } : { ...data };
       if (!weightageOnly && data.uom_type === "TIMELINE" && data.target) {
-        payload.target = new Date(data.target).getTime();
+        const targetDate = new Date(data.target);
+        if (!isNaN(targetDate.getTime())) {
+          payload.target = targetDate.getTime();
+        }
+      }
+      if (!weightageOnly && data.uom_type !== "TIMELINE" && data.target) {
+        payload.target = parseFloat(data.target);
       }
       await onSave(payload);
       onClose();
@@ -151,7 +158,7 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
                   <span style={{ fontSize: 10, color: "#64748B" }}>{remainingWeightage.toFixed(0)}% remaining</span>
                   <span style={{ fontSize: 10, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#94A3B8" }}>
-                    {isOver ? "⚠ exceeds limit" : isExact ? "✓ balanced" : `${(remainingWeightage - weightageVal).toFixed(0)}% left`}
+                    {isOver ? "⚠ exceeds limit" : isExact ? "✓ balanced" : `${(remainingWeightage - weightageNum).toFixed(0)}% left`}
                   </span>
                 </div>
                 {errors.weightage && <span style={{ fontSize: 11, color: "#EF4444", marginTop: 2 }}>{errors.weightage.message}</span>}
@@ -164,11 +171,11 @@ export default function GoalFormModal({ isOpen, onClose, onSave, thrustAreas, ex
                   <div style={{ height: "100%", borderRadius: 3, background: isOver ? "#EF4444" : isExact ? "#10B981" : "#818CF8", width: `${Math.min(used, 100)}%`, transition: "width 300ms ease" }} />
                 </div>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: isOver ? "#EF4444" : isExact ? "#10B981" : "#64748B", minWidth: 28, textAlign: "right" }}>
-                  {weightageVal || 0}%
+                  {weightageNum || 0}%
                 </span>
               </div>
               <span style={{ fontSize: 10, color: "#475569" }}>
-                Total across all goals after this: {(100 - remainingWeightage + weightageVal).toFixed(0)}% / 100%
+                Total across all goals after this: {(100 - remainingWeightage + weightageNum).toFixed(0)}% / 100%
               </span>
             </div>
           </div>
