@@ -101,7 +101,7 @@ def update_goal(goal_id: str, body: GoalUpdate,
     try:
         goal_uuid = uuid.UUID(goal_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+        goal_uuid = goal_id
 
     goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
@@ -153,7 +153,7 @@ def delete_goal(goal_id: str,
     try:
         goal_uuid = uuid.UUID(goal_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+        goal_uuid = goal_id
 
     goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
@@ -342,19 +342,14 @@ def push_team_shared_goal(body: SharedGoalPush,
 def approve_goals(payload: dict,
                   db: Session = Depends(get_db),
                   current_user: User = Depends(require_role(RoleEnum.MANAGER))):
-    employee_id = payload.get("employeeId")
+employee_id = payload.get("employeeId")
     if not employee_id:
         raise HTTPException(400, "employeeId required")
 
     try:
         employee_uuid = uuid.UUID(employee_id)
     except ValueError:
-        raise HTTPException(400, f"Invalid employee ID format: {employee_id}")
-
-    employee = db.query(User).filter(
-        User.id == employee_uuid,
-        User.manager_id == current_user.id
-    ).first()
+        employee_uuid = employee_id
 
     employee = db.query(User).filter(
         User.id == employee_uuid,
@@ -388,15 +383,19 @@ def approve_goals(payload: dict,
     ).all()
 
     if not submitted:
-        raise HTTPException(400, "No submitted goals to approve")
-
-    approved = db.query(Goal).filter(
-        Goal.owner_id == employee_uuid,
-        Goal.cycle_id == cycle.id,
-        Goal.status == GoalStatusEnum.APPROVED
-    ).all()
-    if approved:
-        raise HTTPException(400, "Goals already approved for this cycle")
+        # Check what's actually there
+        all_goals = db.query(Goal).filter(
+            Goal.owner_id == employee_uuid,
+            Goal.cycle_id == cycle.id
+        ).all()
+        if not all_goals:
+            raise HTTPException(400, "No goals found for this employee")
+        
+        status_counts = {}
+        for g in all_goals:
+            key = str(g.status.value) if g.status else "None"
+            status_counts[key] = status_counts.get(key, 0) + 1
+        raise HTTPException(400, f"No submitted goals to approve. Current statuses: {status_counts}")
 
     # Check total across ALL goals including already-approved shared goals
     all_goals = db.query(Goal).filter(
@@ -432,7 +431,7 @@ def return_goal(goal_id: str, payload: dict,
     try:
         goal_uuid = uuid.UUID(goal_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+        goal_uuid = goal_id
 
     goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
@@ -455,7 +454,7 @@ def manager_edit_goal(goal_id: str, body: ManagerGoalEdit,
     try:
         goal_uuid = uuid.UUID(goal_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid goal ID format")
+        goal_uuid = goal_id
 
     goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:

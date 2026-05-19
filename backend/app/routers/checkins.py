@@ -52,9 +52,12 @@ def upsert_checkin(body: CheckInCreate,
                    current_user: User = Depends(require_role(RoleEnum.EMPLOYEE))):
     try:
         goal_uuid = uuid.UUID(str(body.goal_id))
-        goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
-        if not goal:
-            raise HTTPException(404, "Goal not found")
+    except ValueError:
+        goal_uuid = str(body.goal_id)
+
+    goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
+    if not goal:
+        raise HTTPException(404, "Goal not found")
         if str(goal.owner_id) != str(current_user.id):
             raise HTTPException(403, "Not your goal")
         if goal.status != GoalStatusEnum.APPROVED:

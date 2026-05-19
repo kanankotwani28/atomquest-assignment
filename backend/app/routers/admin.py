@@ -305,7 +305,7 @@ def unlock_goal(goal_id: str,
     try:
         goal_uuid = uuid.UUID(goal_id)
     except ValueError:
-        raise HTTPException(400, "Invalid goal ID format")
+        goal_uuid = goal_id
 
     goal = db.query(Goal).filter(Goal.id == goal_uuid).first()
     if not goal:
@@ -331,11 +331,7 @@ def push_shared_goal(body: SharedGoalPush,
         try:
             emp_uuid = uuid.UUID(str(emp_id))
         except ValueError:
-            blocked.append({
-                "employee_id": str(emp_id),
-                "reason": "Invalid employee ID format"
-            })
-            continue
+            emp_uuid = str(emp_id)
 
         emp = db.query(User).filter(User.id == emp_uuid).first()
         if not emp:
@@ -668,7 +664,7 @@ def update_manager(user_id: str, payload: dict,
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
-        raise HTTPException(400, "Invalid user ID format")
+        user_uuid = user_id
 
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
@@ -678,7 +674,7 @@ def update_manager(user_id: str, payload: dict,
         try:
             manager_uuid = uuid.UUID(manager_id)
         except ValueError:
-            raise HTTPException(400, "Invalid manager ID format")
+            manager_uuid = manager_id
         manager = db.query(User).filter(User.id == manager_uuid).first()
         if not manager:
             raise HTTPException(404, "Manager not found")
